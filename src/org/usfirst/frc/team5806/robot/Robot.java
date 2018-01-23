@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.usfirst.frc.team5806.robot.Util;
 import java.util.Map;
 
 import com.kauailabs.navx.frc.AHRS;
@@ -76,7 +75,6 @@ public class Robot extends IterativeRobot {
 
 	@Override
 	public void disabledPeriodic() {
-		Scheduler.getInstance().run();
 	}
 	
 	@Override
@@ -115,9 +113,8 @@ public class Robot extends IterativeRobot {
 	ArrayList<Double> normalRight = new ArrayList<Double>();
 	
 	public void normalize() {
-		double min_voltage = 2.0;
-		for (int j = 0; j < pathLeft.length; j += 1) {
-			normalLeft.add(pathLeft[j]);
+		for (int i = 0; i < pathLeft.length; i += 1) {
+			normalLeft.add(pathLeft[i]);
 		}
 		for (int j = 0; j < pathRight.length; j += 1) {
 			normalRight.add(pathRight[j]);
@@ -138,8 +135,8 @@ public class Robot extends IterativeRobot {
 		rightencoder.reset();
 		
 		double minVolt = 0.2;
-		double k1 = 1.0/(9*1.3);
-		double k2 = 0.01;
+		double k1 = 1.0/(14*1.4);
+		double k2 = 0.6;
 		double k3 = 0.0;
 		double leftSpeed = 0.0;
 		double rightSpeed = 0.0;
@@ -147,27 +144,28 @@ public class Robot extends IterativeRobot {
 		double rightError = 0.0;
 		double leftAccel = 0.0;
 		double rightAccel = 0.0;
-		double TICKS_SCALE = 1.0/300.0;
+		double TICKS_SCALE = 1.0/100.0;
 		
 		double errorBetween = 0.0;
-		double k4 = 0.0;			
+		double k4 = 0.00;
 		for (int i = 1; i < normalLeft.size(); i += 4) {
-			System.out.println("Percent " + (i/(double)normalLeft.size()));
-			if(i-1 % 20 == 0) System.out.println("Encoders " + leftencoder.get() + " " + rightencoder.get());
+			//System.out.println("Percent " + (i/(double)normalLeft.size()));
+			//System.out.println("Encoders " + leftencoder.get() + " " + rightencoder.get());
 			leftSpeed = normalLeft.get(i);
 			rightSpeed = normalRight.get(i);
 			//if (i <= normalLeft.size()-3) {
-				leftError = Math.max(normalLeft.get(i+2)-(double)leftencoder.get()*TICKS_SCALE, 0);
-				rightError = Math.max(normalRight.get(i+2)-(double)rightencoder.get()*TICKS_SCALE, 0);
+				leftError = normalLeft.get(i+2)-(double)leftencoder.get()*TICKS_SCALE;
+				rightError = normalRight.get(i+2)-(double)rightencoder.get()*TICKS_SCALE;
 			//}
 			errorBetween = leftError - rightError;
 			leftAccel = normalLeft.get(i+1);
 			rightAccel = normalRight.get(i+1);
 			
-			Timer.delay(0.020);
+			Timer.delay(0.01);
 			double leftVoltage = k1*leftSpeed+k2*leftError+k3*leftAccel-k4*errorBetween+minVolt;
 			double rightVoltage = k1*rightSpeed+k2*rightError+k3*rightAccel+k4*errorBetween+minVolt;
-			System.out.println(leftVoltage + " " + rightVoltage);
+			System.out.println("Target" + normalLeft.get(i+2) + " " + normalRight.get(i+2));
+			System.out.println("Error: " + leftError + " " + rightError);
 			robotdrive.tankDrive(leftVoltage, rightVoltage);
 		}
 		//}*/ 
