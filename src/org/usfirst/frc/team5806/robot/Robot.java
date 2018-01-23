@@ -135,7 +135,7 @@ public class Robot extends IterativeRobot {
 		rightencoder.reset();
 		
 		double minVolt = 0.2;
-		double k1 = 1.0/(14*1.4);
+		double k1 = 1.0/(14*1.2);
 		double k2 = 0.6;
 		double k3 = 0.0;
 		double leftSpeed = 0.0;
