@@ -146,9 +146,13 @@ public class Robot extends IterativeRobot {
 		double rightAccel = 0.0;
 		double TICKS_SCALE = 1.0/100.0;
 		
+		FileReader reader = new FileReader("/home/lvuser/TestFile");
+		normalLeft = reader.left;
+		normalRight = reader.right;
+		
 		double errorBetween = 0.0;
 		double k4 = 0.00;
-		for (int i = 1; i < normalLeft.size(); i += 4) {
+		for (int i = 1; i < normalLeft.size(); i += 8) {
 			//System.out.println("Percent " + (i/(double)normalLeft.size()));
 			//System.out.println("Encoders " + leftencoder.get() + " " + rightencoder.get());
 			leftSpeed = normalLeft.get(i);
