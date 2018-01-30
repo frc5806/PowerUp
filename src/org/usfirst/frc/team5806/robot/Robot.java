@@ -333,30 +333,27 @@ public class Robot extends IterativeRobot {
 	double correctionFactor = .4/400;
 	double teleopMaxVoltage = 1.0;
 	double MAX_ENCODERS_PER_SECOND = 600.0;
-	double maxAcceleration = 0.08;
+	final double ACCEL = 0.3;
 	double leftVolt = 0;
 	double rightVolt = 0;
+	final double MIN_STRAIGHT_VAL = 0.125;
+	final double MIN_TURNING_VAL = 0.1;
 	
 	@Override
 	public void teleopPeriodic() {
-		//double straightSpeed = 0.0;
-		//double turnSpeed = 0.0;
-		//if (Math.abs(joy.getRawAxis(5)) > 0.1) {
 		double straightSpeed = -1*joy.getRawAxis(5);
-		//}
-		//if (Math.abs(joy.getRawAxis(0)) > 0.1) {
 		double turnSpeed = joy.getRawAxis(0);
 		
-		if (turnSpeed <= 0.05 && turnSpeed >= -0.05) {
+		if (Math.abs(straightSpeed) <= MIN_STRAIGHT_VAL) {
+			straightSpeed = 0.0;
+		}
+		
+		if (Math.abs(turnSpeed) <= MIN_TURNING_VAL) {
 			turnSpeed = 0.0;
 		}
-		//}
+		
 		double desiredLeft = (straightSpeed - 2 * turnSpeed)/(1+Math.abs(2 * turnSpeed));
 		double desiredRight = (straightSpeed + 2 * turnSpeed)/(1+Math.abs(2 * turnSpeed));
-		//if (Math.abs(desiredLeft) <= 0.15) desiredLeft = 0;
-		//if (Math.abs(desiredRight) <= 0.15) desiredRight = 0;
-		
-		//System.out.println("Straight: " + straightSpeed + ", Turn: " + turnSpeed);
 		
 		double encoderLeftInitial = (double)leftencoder.get();
 		double encoderRightInitial = (double)rightencoder.get();
@@ -369,52 +366,42 @@ public class Robot extends IterativeRobot {
 		
 		double leftDiff = Math.abs(desiredLeft - actualSpeedLeft);
 		double rightDiff = Math.abs(desiredRight - actualSpeedRight);
-		double leftChange = maxAcceleration;
-		double rightChange = maxAcceleration;
+		double leftChange = ACCEL;
+		double rightChange = ACCEL;
 		
 		if (actualSpeedLeft < desiredLeft) {
-			leftVolt += leftChange;
+			leftVolt += leftChange * leftDiff;
 		} else if (actualSpeedLeft > desiredLeft) {
-			leftVolt -= leftChange;
+			leftVolt -= leftChange * leftDiff;
 		} else {
 			leftVolt = desiredLeft;
 		}
 		
 		if (actualSpeedRight < desiredRight) {
-			rightVolt += rightChange;
+			rightVolt += rightChange * rightDiff;
 		} else if (actualSpeedRight > desiredRight) {
-			rightVolt -= rightChange;
+			rightVolt -= rightChange * rightDiff;
 		} else {
 			rightVolt = desiredRight;
 		}
-		/*
-		leftVolt = desiredLeft;
-		rightVolt = desiredRight;
-		*/
 		
-//		leftVolt += correctionFactor*(leftVolt - actualSpeedLeft);
-//		rightVolt += correctionFactor*(rightVolt - actualSpeedRight);
 		System.out.println("left diff: " + Math.sqrt(Math.abs(desiredLeft-actualSpeedLeft)) + ", right diff: " + Math.sqrt(Math.abs(desiredRight-actualSpeedRight)) + ", desiredLeft: " + desiredLeft + ", desiredRight: " + desiredRight + ", " + "leftVolt: " + leftVolt + ", rightVolt: " + rightVolt);
-		//System.out.println("left error: " + (leftVolt - actualSpeedLeft) + ", right error: " + (rightVolt - actualSpeedRight));
 		
-//		if (Math.abs(desiredLeft) <= 0.1) desiredLeft = 0;
-//		if (Math.abs(desiredRight) <= 0.1) desiredRight = 0;
-		//robotdrive.tankDrive(teleopMaxVoltage*(Math.abs(leftVolt)*leftVolt), teleopMaxVoltage*(Math.abs(rightVolt)*rightVolt));
-
-
 		SmartDashboard.putNumber("LeftEncoder: ", encoderLeftFinal);
 		SmartDashboard.putNumber("RightEncoder: ", encoderRightFinal);
 		SmartDashboard.putNumber("DesiredLeft: ", desiredLeft);
 		SmartDashboard.putNumber("DesiredRight: ", desiredRight);
+		SmartDashboard.putNumber("VoltLeft: ", leftVolt);
+		SmartDashboard.putNumber("VoltRight: ", rightVolt);
 		SmartDashboard.putNumber("StraightSpeed: ", straightSpeed);
 		SmartDashboard.putNumber("TurnSpeed: ", turnSpeed);
 		
 		System.out.println("LeftEncoder: " + encoderLeftFinal + "\nRightEncoder: " + encoderRightFinal);
 		System.out.println("DesiredLeft: " + desiredLeft + "\nDesiredRight: " + desiredRight + "\n");
+		System.out.println("leftVolt: " + leftVolt + "\nrightVolt: " + rightVolt + "\n");
 		System.out.println("StraightSpeed: " + straightSpeed + "\nTurnSpeed: " + turnSpeed + "\n");
 		
-		robotdrive.tankDrive(teleopMaxVoltage*desiredLeft, teleopMaxVoltage*desiredRight);
-//		robotdrive.tankDrive(teleopMaxVoltage*leftVolt, teleopMaxVoltage*rightVolt);
+		robotdrive.tankDrive(teleopMaxVoltage*leftVolt, teleopMaxVoltage*rightVolt);
 	}
 
 	/**
