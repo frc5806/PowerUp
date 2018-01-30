@@ -12,6 +12,7 @@ import java.util.Map;
 
 import com.kauailabs.navx.frc.AHRS;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
@@ -36,8 +37,7 @@ public class Robot extends IterativeRobot {
 	SendableChooser<Command> chooser = new SendableChooser<>();
 
 	RobotDrive robotdrive;
-	Joystick rightstick;
-	Joystick leftstick;
+	Joystick joy;
 	Encoder leftencoder;
 	Encoder rightencoder;
 	static final double PERIOD_OF_OSCILLATION = 0.05;
@@ -53,9 +53,8 @@ public class Robot extends IterativeRobot {
 		reader = new FileReader("/home/lvuser/TestFile");
 
 		robotdrive = new RobotDrive(1, 3);
-		leftstick = new Joystick(0);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+		joy = new Joystick(0);
 		
-		rightstick = leftstick;
 		leftencoder = new Encoder(2,3);
 		rightencoder = new Encoder(0,1);
 		rightencoder.setReverseDirection(true);
@@ -86,10 +85,19 @@ public class Robot extends IterativeRobot {
 		rightencoder.reset();
 		leftencoder.reset();
 		
+		String gameData;
+		gameData = DriverStation.getInstance().getGameSpecificMessage();
+		/*if(gameData.charAt(0) == 'L')
+		{
+			//Put left auto code here
+		} else {
+			//Put right auto code here
+		}*/
+		
 		try {
 			//goForward(1000, 0.8);
 			System.out.println("CALL_SPLINE");
-			spline();
+			spline(gameData.charAt(0));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -130,7 +138,7 @@ public class Robot extends IterativeRobot {
 	}
 	
 	
-	public void spline() throws IOException {
+	public void spline(char side) throws IOException {
 		System.out.println("AGAIN");
 		normalize();
 		
@@ -149,8 +157,13 @@ public class Robot extends IterativeRobot {
 		double rightAccel = 0.0;
 		double TICKS_SCALE = 1.0/100.0;
 		
-		normalLeft = reader.left;
-		normalRight = reader.right;
+		if(side == 'L') {
+			normalLeft = reader.left;
+			normalRight = reader.right;
+		} else {
+			normalRight = reader.left;
+			normalLeft = reader.right;
+		}
 		
 		double errorBetween = 0.0;
 		double k4 = 0.00;
@@ -309,16 +322,99 @@ public class Robot extends IterativeRobot {
 		// teleop starts running. If you want the autonomous to
 		// continue until interrupted by another command, remove
 		// this line or comment it out.
-		if (autonomousCommand != null)
-			autonomousCommand.cancel();
+		leftencoder.reset();
+		rightencoder.reset();
 	}
 
 	/**
 	 * This function is called periodically during operator control
 	 */
+	double delay = 0.05;
+	double correctionFactor = .4/400;
+	double teleopMaxVoltage = 1.0;
+	double MAX_ENCODERS_PER_SECOND = 600.0;
+	double maxAcceleration = 0.08;
+	double leftVolt = 0;
+	double rightVolt = 0;
+	
 	@Override
 	public void teleopPeriodic() {
-		Scheduler.getInstance().run();
+		//double straightSpeed = 0.0;
+		//double turnSpeed = 0.0;
+		//if (Math.abs(joy.getRawAxis(5)) > 0.1) {
+		double straightSpeed = -1*joy.getRawAxis(5);
+		//}
+		//if (Math.abs(joy.getRawAxis(0)) > 0.1) {
+		double turnSpeed = joy.getRawAxis(0);
+		
+		if (turnSpeed <= 0.05 && turnSpeed >= -0.05) {
+			turnSpeed = 0.0;
+		}
+		//}
+		double desiredLeft = (straightSpeed - 2 * turnSpeed)/(1+Math.abs(2 * turnSpeed));
+		double desiredRight = (straightSpeed + 2 * turnSpeed)/(1+Math.abs(2 * turnSpeed));
+		//if (Math.abs(desiredLeft) <= 0.15) desiredLeft = 0;
+		//if (Math.abs(desiredRight) <= 0.15) desiredRight = 0;
+		
+		//System.out.println("Straight: " + straightSpeed + ", Turn: " + turnSpeed);
+		
+		double encoderLeftInitial = (double)leftencoder.get();
+		double encoderRightInitial = (double)rightencoder.get();
+		Timer.delay(delay);
+		double encoderLeftFinal = (double)leftencoder.get();
+		double encoderRightFinal = (double)rightencoder.get();
+		
+		double actualSpeedLeft = (encoderLeftFinal - encoderLeftInitial)/(delay*MAX_ENCODERS_PER_SECOND);
+		double actualSpeedRight = (encoderRightFinal - encoderRightInitial)/(delay*MAX_ENCODERS_PER_SECOND);
+		
+		double leftDiff = Math.abs(desiredLeft - actualSpeedLeft);
+		double rightDiff = Math.abs(desiredRight - actualSpeedRight);
+		double leftChange = maxAcceleration;
+		double rightChange = maxAcceleration;
+		
+		if (actualSpeedLeft < desiredLeft) {
+			leftVolt += leftChange;
+		} else if (actualSpeedLeft > desiredLeft) {
+			leftVolt -= leftChange;
+		} else {
+			leftVolt = desiredLeft;
+		}
+		
+		if (actualSpeedRight < desiredRight) {
+			rightVolt += rightChange;
+		} else if (actualSpeedRight > desiredRight) {
+			rightVolt -= rightChange;
+		} else {
+			rightVolt = desiredRight;
+		}
+		/*
+		leftVolt = desiredLeft;
+		rightVolt = desiredRight;
+		*/
+		
+//		leftVolt += correctionFactor*(leftVolt - actualSpeedLeft);
+//		rightVolt += correctionFactor*(rightVolt - actualSpeedRight);
+		System.out.println("left diff: " + Math.sqrt(Math.abs(desiredLeft-actualSpeedLeft)) + ", right diff: " + Math.sqrt(Math.abs(desiredRight-actualSpeedRight)) + ", desiredLeft: " + desiredLeft + ", desiredRight: " + desiredRight + ", " + "leftVolt: " + leftVolt + ", rightVolt: " + rightVolt);
+		//System.out.println("left error: " + (leftVolt - actualSpeedLeft) + ", right error: " + (rightVolt - actualSpeedRight));
+		
+//		if (Math.abs(desiredLeft) <= 0.1) desiredLeft = 0;
+//		if (Math.abs(desiredRight) <= 0.1) desiredRight = 0;
+		//robotdrive.tankDrive(teleopMaxVoltage*(Math.abs(leftVolt)*leftVolt), teleopMaxVoltage*(Math.abs(rightVolt)*rightVolt));
+
+
+		SmartDashboard.putNumber("LeftEncoder: ", encoderLeftFinal);
+		SmartDashboard.putNumber("RightEncoder: ", encoderRightFinal);
+		SmartDashboard.putNumber("DesiredLeft: ", desiredLeft);
+		SmartDashboard.putNumber("DesiredRight: ", desiredRight);
+		SmartDashboard.putNumber("StraightSpeed: ", straightSpeed);
+		SmartDashboard.putNumber("TurnSpeed: ", turnSpeed);
+		
+		System.out.println("LeftEncoder: " + encoderLeftFinal + "\nRightEncoder: " + encoderRightFinal);
+		System.out.println("DesiredLeft: " + desiredLeft + "\nDesiredRight: " + desiredRight + "\n");
+		System.out.println("StraightSpeed: " + straightSpeed + "\nTurnSpeed: " + turnSpeed + "\n");
+		
+		robotdrive.tankDrive(teleopMaxVoltage*desiredLeft, teleopMaxVoltage*desiredRight);
+//		robotdrive.tankDrive(teleopMaxVoltage*leftVolt, teleopMaxVoltage*rightVolt);
 	}
 
 	/**
