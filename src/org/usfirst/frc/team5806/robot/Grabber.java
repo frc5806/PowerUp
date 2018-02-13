@@ -20,6 +20,10 @@ public class Grabber
 	{
 		position = GrabPositions.DOWN;
 	}
+	public void stop()
+	{
+		position = GrabPositions.STOP;
+	}
 	public void update() {
 		switch (position){
 		case UP:
