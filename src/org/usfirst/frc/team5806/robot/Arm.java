@@ -48,8 +48,10 @@ public class Arm {
 	}
 	
 	public void update() {
-		if (state.equals(ArmState.INTAKE)) wheels.set(1.0);
-		else
+		if (state.equals(ArmState.INTAKE)) {
+			wheels.set(1.0);
+		}
+		else {
 			switch(state) {
 				case INITIAL:
 					stateNum = POT_INITIAL;
@@ -73,6 +75,7 @@ public class Arm {
 			if (potRight.get() < stateNum) armRight.set(0.8);
 			else if (potRight.get() > stateNum) armRight.set(-0.8);
 			else armRight.set(0.0);
+		}
 	}
 }
 
