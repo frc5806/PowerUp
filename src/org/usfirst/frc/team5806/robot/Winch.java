@@ -8,8 +8,8 @@ public class Winch {
 	private VictorSP motor;
 	private WinchState currentState = WinchState.STOP;
 
-	public Winch(int port) {
-		motor = new VictorSP(port);
+	public Winch(VictorSP motor) {
+		this.motor = motor;
 		currentState = WinchState.STOP;
 	}
 

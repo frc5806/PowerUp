@@ -10,13 +10,13 @@ public class Grabber {
     private VictorSP grab;
     private GrabberState currentState = GrabberState.STOP;
 
-    public Grabber(int port) {
-        this(port, DEFAULT_SPEED);
+    public Grabber(VictorSP grab) {
+        this(grab, DEFAULT_SPEED);
 	}
 
-    public Grabber(int port, double speed) {
+    public Grabber(VictorSP grab, double speed) {
         grabSpeed = speed;
-        grab = new VictorSP(port);
+        this.grab = grab;
     }
 
     public void up() {

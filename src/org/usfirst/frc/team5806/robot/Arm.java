@@ -17,12 +17,12 @@ public class Arm {
 	private final static double POT_SWITCH = 30.0;
 	private final static double POT_SCALE = 60.0;
 	
-	public Arm(int victorPortLeft, int victorPortRight, int potPortLeft, int potPortRight, int wheelsPort) {
-		armLeft = new VictorSP(victorPortLeft);
-		armRight = new VictorSP(victorPortRight);
-		potLeft = new AnalogPotentiometer(potPortLeft, 360, 30);
-		potRight = new AnalogPotentiometer(potPortRight, 360, 30);
-		wheels = new VictorSP(wheelsPort);
+	public Arm(VictorSP armLeft, VictorSP armRight, AnalogPotentiometer potLeft, AnalogPotentiometer potRight, VictorSP wheels) {
+		this.armLeft = armLeft;
+		this.armRight = armRight;
+		this.potLeft = potLeft;
+		this.potRight = potRight;
+		this.wheels = wheels;
 		state = ArmState.INITIAL;
 		stateNum = POT_INITIAL;
 	}
@@ -50,8 +50,7 @@ public class Arm {
 	public void update() {
 		if (state.equals(ArmState.INTAKE)) {
 			wheels.set(1.0);
-		}
-		else {
+		} else {
 			switch(state) {
 				case INITIAL:
 					stateNum = POT_INITIAL;

@@ -53,7 +53,6 @@ public class Robot extends IterativeRobot {
 	public void robotInit() {
 		reader = new FileReader("/home/lvuser/TestFile");
 
-//		robotdrive = new RobotDrive(1, 3);
 		robotdrive = new RobotDrive(3, 1);
 		joy = new Joystick(0);
 		

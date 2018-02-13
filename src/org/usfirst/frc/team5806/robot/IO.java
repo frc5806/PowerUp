@@ -20,19 +20,23 @@ public class IO {
 	private VictorSP rightWall;
 	private VictorSP rightFlap;
 
-	public IO(int leftSolenoid1, int leftSolenoid2, int rightSolenoid1, int rightSolenoid2, int leftPopperSolenoid1, int leftPopperSolenoid2, int rightPopperSolenoid1, int rightPopperSolenoid2, int leftWallVictor, int leftFlapVictor, int rightWallVictor,  int rightFlapVictor, double initialMotorSpeed) {
+	public IO(DoubleSolenoid left, DoubleSolenoid right, 
+		DoubleSolenoid leftPopper, DoubleSolenoid rightPopper, 
+		VictorSP leftWall, VictorSP rightWall,
+		VictorSP leftFlap, VictorSP rightFlap) {
 		motorSpeed = initialMotorSpeed;
 
-		left = new DoubleSolenoid(leftSolenoid1, leftSolenoid2);
-		right = new DoubleSolenoid(rightSolenoid1, rightSolenoid2);
+		this.left = left;
+		this.right = right;
 
-		leftPopper = new DoubleSolenoid(leftPopperSolenoid1, leftPopperSolenoid1);
-		rightPopper = new DoubleSolenoid(rightPopperSolenoid1, rightPopperSolenoid2);
+		this.leftPopper = leftPopper;
+		this.rightPopper = rightPopper;
 
-		leftWall = new VictorSP(leftWallVictor);
-		leftFlap = new VictorSP(leftFlapVictor);
-		rightWall = new VictorSP(rightWallVictor);
-		rightFlap = new VictorSP(rightFlapVictor);
+		this.leftWall = leftWall;
+		this.rightWall = rightWall;
+
+		this.leftFlap = leftFlap;
+		this.rightFlap = rightFlap;
 	}
 
 	public void shoot() {

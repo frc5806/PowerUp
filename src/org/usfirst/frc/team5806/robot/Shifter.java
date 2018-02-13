@@ -5,8 +5,8 @@ public class Shifter {
 	private DoubleSolenoid solShift;
 	private boolean highGear;
 
-	public Shifter(int port1, int port2, boolean startInHighGear) {
-		solShift = new DoubleSolenoid(port1, port2);
+	public Shifter(DoubleSolenoid sholShift, boolean startInHighGear) {
+		this.solShift = solShift;
 		highGear = startInHighGear ? true : false;
 		solShift.set(startInHighGear ? DoubleSolenoid.Value.kForward : DoubleSolenoid.Value.kReverse);
 	}
