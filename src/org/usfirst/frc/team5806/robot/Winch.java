@@ -2,9 +2,11 @@ package org.usfirst.frc.team5806.robot;
 import edu.wpi.first.wpilibj.VictorSP;
 
 public class Winch {
+	
+	public static final double UP_SPEED = 1.0;
+	
 	private VictorSP motor;
-	private WinchState currentState;
-	private static final double UP_SPEED = 1.0;
+	private WinchState currentState = WinchState.STOP;
 
 	public Winch(int port) {
 		motor = new VictorSP(port);

@@ -2,42 +2,53 @@ package org.usfirst.frc.team5806.robot;
 
 import edu.wpi.first.wpilibj.VictorSP;
 
-public class Grabber 
-{
-	private final double SPEED = 1;
-	private VictorSP grab;
-	private GrabPositions position;
-	public Grabber(int port)
-	{
-		grab = new VictorSP(port);
-		position = GrabPositions.STOP;
+public class Grabber {
+
+	public static final double DEFAULT_SPEED = 1.0;
+
+    private double grabSpeed;
+    private VictorSP grab;
+    private GrabberState currentState = GrabberState.STOP;
+
+    public Grabber(int port) {
+        this(port, DEFAULT_SPEED);
 	}
-	public void up()
-	{
-		position = GrabPositions.UP;
+
+    public Grabber(int port, double speed) {
+        grabSpeed = speed;
+        grab = new VictorSP(port);
+    }
+
+    public void up() {
+		currentState = GrabberState.UP;
 	}
-	public void down()
-	{
-		position = GrabPositions.DOWN;
+
+    public void down() {
+		currentState = GrabberState.DOWN;
 	}
-	public void stop()
-	{
-		position = GrabPositions.STOP;
+
+    public void stop() {
+		currentState = GrabberState.STOP;
 	}
+
 	public void update() {
-		switch (position){
+		switch (currentState) {
 		case UP:
-			grab.set(SPEED);
-		
+			grab.set(grabSpeed);
+            break;
+
 		case DOWN:
-			grab.set(-SPEED);
-		
+			grab.set(-grabSpeed);
+		    break;
+
 		case STOP:
 			grab.set(0);
-	
+            break;
+
 		}
 	}
 }
-enum GrabPositions{
-	UP,DOWN,STOP
+
+enum GrabberState {
+	UP, DOWN, STOP
 }
