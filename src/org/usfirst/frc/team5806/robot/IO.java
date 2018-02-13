@@ -1,12 +1,13 @@
 package org.usfirst.frc.team5806.robot;
 
 import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.Victor;
+import edu.wpi.first.wpilibj.VictorSP;
 
 
 public class IO {
 
 	private double motorSpeed;
+	private IOMotorState currentState = IOMotorState.OFF;
 
 	private DoubleSolenoid left; //Left flap solenoid
 	private DoubleSolenoid right; //Right flap solenoid
@@ -14,10 +15,10 @@ public class IO {
 	private DoubleSolenoid leftPopper;
 	private DoubleSolenoid rightPopper;
 
-	private Victor leftWall;
-	private Victor leftFlap;
-	private Victor rightWall;
-	private Victor rightFlap;
+	private VictorSP leftWall;
+	private VictorSP leftFlap;
+	private VictorSP rightWall;
+	private VictorSP rightFlap;
 
 	public IO(int leftSolenoid1, int leftSolenoid2, int rightSolenoid1, int rightSolenoid2, int leftPopperSolenoid1, int leftPopperSolenoid2, int rightPopperSolenoid1, int rightPopperSolenoid2, int leftWallVictor, int leftFlapVictor, int rightWallVictor,  int rightFlapVictor, double initialMotorSpeed) {
 		motorSpeed = initialMotorSpeed;
@@ -28,10 +29,10 @@ public class IO {
 		leftPopper = new DoubleSolenoid(leftPopperSolenoid1, leftPopperSolenoid1);
 		rightPopper = new DoubleSolenoid(rightPopperSolenoid1, rightPopperSolenoid2);
 
-		leftWall = new Victor(leftWallVictor);
-		leftFlap = new Victor(leftFlapVictor);
-		rightWall = new Victor(rightWallVictor);
-		rightFlap = new Victor(rightFlapVictor);
+		leftWall = new VictorSP(leftWallVictor);
+		leftFlap = new VictorSP(leftFlapVictor);
+		rightWall = new VictorSP(rightWallVictor);
+		rightFlap = new VictorSP(rightFlapVictor);
 	}
 
 	public void shoot() {
@@ -40,19 +41,22 @@ public class IO {
 		rollersOn(true);
 	}
 
+    public void finishShooting() {
+    	leftPopper.set(DoubleSolenoid.Value.kOff);
+    	rightPopper.set(DoubleSolenoid.Value.kOff);
+		rollersOff();
+    }
+
 	public void rollersOn(boolean reverse) {
-		double speed = reverse ? -motorSpeed : motorSpeed;
-		leftWall.set(-speed);
-		leftFlap.set(-speed);
-		rightWall.set(speed);
-		rightFlap.set(speed);
+		if (reverse) {
+            currentState = IOMotorState.REVERSE;
+        } else {
+            currentState = IOMotorState.FORWARD;
+        }
 	}
 
 	public void rollersOff() {
-		leftWall.set(0.0);
-		leftFlap.set(0.0);
-		rightWall.set(0.0);
-		rightFlap.set(0.0);
+		currentState = IOMotorState.OFF;
 	}
 
 	public void rollersSetSpeed(int speed) {
@@ -69,10 +73,16 @@ public class IO {
 		right.set(DoubleSolenoid.Value.kReverse);
 	}
 
-	/* Nothing to do in an update function unless Victors' speed needs to be constantly set
-	 *
-	 * public void update() {
-	 *
-	}*/
+	public void update() {
+        double speed = currentState == IOMotorState.FORWARD ? motorSpeed : currentState == IOMotorState.REVERSE ? -motorSpeed : 0.0;
 
+        leftWall.set(-speed);
+        leftFlap.set(-speed);
+        rightWall.set(speed);
+        rightFlap.set(speed);
+	}
+}
+
+enum IOMotorState {
+	FORWARD, REVERSE, OFF
 }
