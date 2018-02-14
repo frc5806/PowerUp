@@ -62,7 +62,7 @@ public class Arm {
 		if (state.equals(ArmState.INTAKE)) {
 		wheels.set(1.0);
 		}
-		
+
 		else {
 			switch(state) {
 				case INITIAL:
@@ -82,32 +82,32 @@ public class Arm {
 			}
 		}
 
-			if (potLeft.get() < stateNum) armDesiredSpeedLeft = MAX_ARM_SPEED;
-			else if (potLeft.get() > stateNum) armDesiredSpeedLeft = -MAX_ARM_SPEED;
-			else armDesiredSpeedLeft = 0.0;
+		if (potLeft.get() < stateNum) armDesiredSpeedLeft = MAX_ARM_SPEED;
+		else if (potLeft.get() > stateNum) armDesiredSpeedLeft = -MAX_ARM_SPEED;
+		else armDesiredSpeedLeft = 0.0;
 
-			if (potRight.get() < stateNum) armDesiredSpeedRight = MAX_ARM_SPEED;
-			else if (potRight.get() > stateNum) armDesiredSpeedRight = -MAX_ARM_SPEED;
-			else armDesiredSpeedRight = 0.0;
+		if (potRight.get() < stateNum) armDesiredSpeedRight = MAX_ARM_SPEED;
+		else if (potRight.get() > stateNum) armDesiredSpeedRight = -MAX_ARM_SPEED;
+		else armDesiredSpeedRight = 0.0;
 
-			armSpeedLeft = (armSpeedLeft + armDesiredSpeedLeft)/2;
-			armSpeedRight = (armSpeedRight + armDesiredSpeedRight)/2;
+		armSpeedLeft = (armSpeedLeft + armDesiredSpeedLeft)/2;
+		armSpeedRight = (armSpeedRight + armDesiredSpeedRight)/2;
 
-			double potLeftInitial = potLeft.get();
-			double potRightInitial = potRight.get();
-			Timer.delay(0.05);
-			double potLeftFinal = potLeft.get();
-			double potRightFinal = potRight.get();
-			double actualSpeedLeft = (potLeftFinal - potLeftInitial)/0.05;
-			double actualSpeedRight = (potRightFinal - potRightInitial)/0.05;
+		double potLeftInitial = potLeft.get();
+		double potRightInitial = potRight.get();
+		Timer.delay(0.05);
+		double potLeftFinal = potLeft.get();
+		double potRightFinal = potRight.get();
+		double actualSpeedLeft = (potLeftFinal - potLeftInitial)/0.05;
+		double actualSpeedRight = (potRightFinal - potRightInitial)/0.05;
 
-			correctionLeft = 0.001*(armDesiredSpeedLeft - actualSpeedLeft);
-			correctionRight = 0.001*(armDesiredSpeedRight - actualSpeedRight);
-			armSpeedLeft += correctionLeft;
-			armSpeedRight += correctionRight;
+		correctionLeft = 0.001*(armDesiredSpeedLeft - actualSpeedLeft);
+		correctionRight = 0.001*(armDesiredSpeedRight - actualSpeedRight);
+		armSpeedLeft += correctionLeft;
+		armSpeedRight += correctionRight;
 
-			armLeft.set(armSpeedLeft);
-			armRight.set(armSpeedRight);
+		armLeft.set(armSpeedLeft);
+		armRight.set(armSpeedRight);
 	}
 }
 
