@@ -45,24 +45,19 @@ public class Robot extends IterativeRobot {
 	static final double TICKS_PER_INCH = 7.676;
 	FileReader reader;
 	
-	
-	AHRS ahrs;
-	
+		
 	double integral = 0.0;
 	
 	public void robotInit() {
-		reader = new FileReader("/home/lvuser/TestFile");
+		//reader = new FileReader("/home/lvuser/TestFile");
 
-//		robotdrive = new RobotDrive(1, 3);
-		robotdrive = new RobotDrive(3, 1);
+		robotdrive = new RobotDrive(1, 3);
 		joy = new Joystick(0);
 		
 		leftencoder = new Encoder(2,3);
 		rightencoder = new Encoder(0,1);
-		rightencoder.setReverseDirection(true);
-		
-		ahrs = new AHRS(SPI.Port.kMXP);
-		
+//		rightencoder.setReverseDirection(true);
+				
 		System.out.println("INIT");
 	}
 
@@ -256,7 +251,7 @@ public class Robot extends IterativeRobot {
 		return;
 	}
 	
-	public void turnTest(double degrees, double speed, double rampUpDegrees) {
+	/*public void turnTest(double degrees, double speed, double rampUpDegrees) {
 		ahrs.reset();
 		ahrs.resetDisplacement();
 		turn(degrees, speed, rampUpDegrees);
@@ -316,7 +311,7 @@ public class Robot extends IterativeRobot {
 		volt = 0.0;
 		
 		robotdrive.tankDrive(0, 0);
-	}
+	}*/
 
 	@Override
 	public void teleopInit() {
@@ -336,25 +331,33 @@ public class Robot extends IterativeRobot {
 	final double MIN_JOYSTICK_READ_TURN = 0.025; // Same as above but for turning
 //	double correctionFactor = .4/400;
 	double teleopMaxVoltage = 1.0;
-	final double MAX_ENCODERS_PER_SECOND = 600.0;
-	final double ACCELERATION_CONSTANT = 0.1;
+	final double MAX_ENCODERS_PER_SECOND = 1000.0;
+	final double ERROR_SENSITIVITY = 0.02;
 	final double TANK_DRIVE_MAX = 0.75;
-	double leftVolt = 0;
-	double rightVolt = 0;
+//	double leftVolt = 0;
+//	double rightVolt = 0;
 
-	double leftSpeed = 0.0;
-	double rightSpeed = 0.0; 
+//	double leftSpeed = 0.0;
+//	double rightSpeed = 0.0; 
+	double leftTotalError = 0.0;
+	double rightTotalError = 0.0;
+	double leftAvgSpeed = 0.0;
+	double rightAvgSpeed = 0.0;
 	
 	@Override
 	public void teleopPeriodic() {
 		
-		/*
-		// TANK DRIVE
-		robotdrive.tankDrive(TANK_DRIVE_MAX*-joy.getRawAxis(5), TANK_DRIVE_MAX*-joy.getRawAxis(1));
-		*/
 		
+		// TANK DRIVE
+//		if(Math.abs(joy.getRawAxis(3)) > 0.2){
+//			robotdrive.tankDrive(TANK_DRIVE_MAX*joy.getRawAxis(3),  TANK_DRIVE_MAX*-joy.getRawAxis(3));
+//		} else {
+//			robotdrive.tankDrive(TANK_DRIVE_MAX*joy.getRawAxis(1),  TANK_DRIVE_MAX*-joy.getRawAxis(5));
+//		}
+////		
+////		
 		//if (Math.abs(joy.getRawAxis(5)) > 0.1) {
-		double straightSpeed = -1*joy.getRawAxis(5);
+		double straightSpeed = -joy.getRawAxis(5);
 		
 		//if (Math.abs(joy.getRawAxis(0)) > 0.1) {
 		double turnSpeed = joy.getRawAxis(0);
@@ -390,93 +393,63 @@ public class Robot extends IterativeRobot {
 		
 		//System.out.println("Straight: " + straightSpeed + ", Turn: " + turnSpeed);
 		
-		double encoderLeftInitial = (double)leftencoder.get();
-		double encoderRightInitial = (double)rightencoder.get();
-		Timer.delay(delay);
+//		double encoderLeftInitial = (double)leftencoder.get();
+//		double encoderRightInitial = (double)rightencoder.get();
+//		Timer.delay(delay);
 		double encoderLeftFinal = (double)leftencoder.get();
 		double encoderRightFinal = (double)rightencoder.get();
 		
-		double actualSpeedLeft = (encoderLeftFinal - encoderLeftInitial)/(delay*MAX_ENCODERS_PER_SECOND);
-		double actualSpeedRight = (encoderRightFinal - encoderRightInitial)/(delay*MAX_ENCODERS_PER_SECOND);
+		leftAvgSpeed = (0.5 * leftAvgSpeed) + 0.5 * leftencoder.getRate();/*(encoderLeftFinal - encoderLeftInitial)/(delay*MAX_ENCODERS_PER_SECOND)*/;
+		rightAvgSpeed = (0.5 * rightAvgSpeed) + 0.5 * rightencoder.getRate();/*(encoderRightFinal - encoderRightInitial)/(delay*MAX_ENCODERS_PER_SECOND)*/;
 		
-		double leftError = desiredLeft - actualSpeedLeft;
-		double rightError =  desiredRight - actualSpeedRight;
-		double leftChange = ACCELERATION_CONSTANT * leftError;
-		double rightChange = ACCELERATION_CONSTANT * rightError;
+		double leftError = (desiredLeft * MAX_ENCODERS_PER_SECOND) - leftAvgSpeed;
+		double rightError =  (desiredRight * MAX_ENCODERS_PER_SECOND) - rightAvgSpeed;
 		
-		leftSpeed += leftChange;
-		rightSpeed += rightChange;
+		leftTotalError += ERROR_SENSITIVITY * leftError / MAX_ENCODERS_PER_SECOND;
+		rightTotalError += ERROR_SENSITIVITY * rightError / MAX_ENCODERS_PER_SECOND;
 		
-//		if (actualSpeedLeft < desiredLeft) {
-//			leftVolt += leftChange;
-//		} else if (actualSpeedLeft > desiredLeft) {
-//			leftVolt -= leftChange;
-//		} else {
-//			leftVolt = desiredLeft;
-//		}
-//		
-//		if (actualSpeedRight < desiredRight) {
-//			rightVolt += rightChange;
-//		} else if (actualSpeedRight > desiredRight) {
-//			rightVolt -= rightChange;
-//		} else {
-//			rightVolt = desiredRight;
-//		}
+//		double leftChange = ACCELERATION_CONSTANT * leftError;
+//		double rightChange = ACCELERATION_CONSTANT * rightError;
+//		leftSpeed += leftChange;
+//		rightSpeed += rightChange;
 		
-//		double minVolt = 0.2;
-//		double k1 = 1.0/(14*1.2);
-//		double k2 = 0.6;
-//		double k3 = 0.0;
-//		double leftSpeed = 0.0;
-//		double rightSpeed = 0.0;
-//		double leftAccel = 0.0;
-//		double rightAccel = 0.0;
-//		double TICKS_SCALE = 1.0/100.0;
-//		
-//		//System.out.println("Percent " + (i/(double)normalLeft.size()));
-//		//System.out.println("Encoders " + leftencoder.get() + " " + rightencoder.get());
-//		leftSpeed = desiredLeft;
-//		rightSpeed = desiredRight;
-//		//if (i <= normalLeft.size()-3) {
-//		leftError = normalLeft.get(i+2)-(double)leftencoder.get()*TICKS_SCALE;
-//		rightError = normalRight.get(i+2)-(double)rightencoder.get()*TICKS_SCALE;
-//		//}
-//		errorBetween = leftError - rightError;
-//		leftAccel = normalLeft.get(i+1);
-//		rightAccel = normalRight.get(i+1);
-//		
-//		Timer.delay(0.01);
-//		double leftVoltage = k1*leftSpeed+k2*leftError+k3*leftAccel-k4*errorBetween+minVolt;
-//		double rightVoltage = k1*rightSpeed+k2*rightError+k3*rightAccel+k4*errorBetween+minVolt;
-//		System.out.println("Target" + normalLeft.get(i+2) + " " + normalRight.get(i+2));
-//		System.out.println("Error: " + leftError + " " + rightError);
-//		robotdrive.tankDrive(leftVoltage, rightVoltage);
-		
-//		if (Math.abs(desiredLeft) <= 0.1) desiredLeft = 0;
-//		if (Math.abs(desiredRight) <= 0.1) desiredRight = 0;
-		//robotdrive.tankDrive(teleopMaxVoltage*(Math.abs(leftVolt)*leftVolt), teleopMaxVoltage*(Math.abs(rightVolt)*rightVolt));
-
 		SmartDashboard.putNumber("LeftEncoder: ", encoderLeftFinal);
 		SmartDashboard.putNumber("RightEncoder: ", encoderRightFinal);
 		SmartDashboard.putNumber("DesiredLeft: ", desiredLeft);
 		SmartDashboard.putNumber("DesiredRight: ", desiredRight);
+		SmartDashboard.putNumber("LeftAvgSpeed: ", leftAvgSpeed);
+		SmartDashboard.putNumber("rightAvgSpeed: ", rightAvgSpeed);
 		SmartDashboard.putNumber("StraightSpeed: ", straightSpeed);
 		SmartDashboard.putNumber("TurnSpeed: ", turnSpeed);
 		SmartDashboard.putNumber("LeftError: ", leftError);
 		SmartDashboard.putNumber("RightError: ", rightError);
-		SmartDashboard.putNumber("Error Diffrence (right minus left): ", rightError - leftError);
-		SmartDashboard.putNumber("leftSpeed: ", leftSpeed);
-		SmartDashboard.putNumber("rightSpeed: ", rightSpeed);
+		SmartDashboard.putNumber("LeftTotalError: ", leftTotalError);
+		SmartDashboard.putNumber("RightTotalError: ", rightTotalError);
+//		SmartDashboard.putNumber("Error Difference (right minus left): ", rightError - leftError);
+//		SmartDashboard.putNumber("LeftSpeed: ", leftSpeed);
+//		SmartDashboard.putNumber("RightSpeed: ", rightSpeed);
 		
-		System.out.println("LeftEncoder: " + encoderLeftFinal + "\nRightEncoder: " + encoderRightFinal);
-		System.out.println("DesiredLeft: " + desiredLeft + "\nDesiredRight: " + desiredRight + "\n");
-		System.out.println("StraightSpeed: " + straightSpeed + "\nTurnSpeed: " + turnSpeed + "\n");
-		System.out.println("LeftError: " + leftError + "\nRightError: " + rightError + "\n");
+//		System.out.println("LeftEncoder: " + encoderLeftFinal + "\nRightEncoder: " + encoderRightFinal);
+//		System.out.println("DesiredLeft: " + desiredLeft + "\nDesiredRight: " + desiredRight + "\n");
+//		System.out.println("StraightSpeed: " + straightSpeed + "\nTurnSpeed: " + turnSpeed + "\n");
+//		System.out.println("LeftError: " + leftError + "\nRightError: " + rightError + "\n");
+//		
+//		if (joy.getRawAxis(5) == 0) {
+//			leftSpeed = 0;
+//			rightSpeed = 0;
+//		}
 		
-//		robotdrive.tankDrive(teleopMaxVoltage*desiredLeft, teleopMaxVoltage*desiredRight);
-//		robotdrive.tankDrive(teleopMaxVoltage*leftVolt, teleopMaxVoltage*rightVolt);
-		robotdrive.tankDrive(teleopMaxVoltage*leftSpeed, teleopMaxVoltage*rightSpeed);
+//		robotdrive.tankDrive(leftSpeed, rightSpeed);
+		robotdrive.tankDrive(desiredLeft + leftTotalError, desiredRight + rightTotalError);
+		
+//		if (straightSpeed <= MIN_JOYSTICK_READ_STRAIGHT && straightSpeed >= -MIN_JOYSTICK_READ_STRAIGHT) {
+//			robotdrive.tankDrive(0,0);
+//			
+//		} else {
+//			robotdrive.tankDrive(teleopMaxVoltage*leftSpeed, teleopMaxVoltage*rightSpeed);
+//		}
 	}
+	
 
 	/**
 	 * This function is called periodically during test mode
