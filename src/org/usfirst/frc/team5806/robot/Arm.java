@@ -16,7 +16,8 @@ public class Arm {
 	private final static double POT_INITIAL = 15.0;
 	private final static double POT_SWITCH = 30.0;
 	private final static double POT_SCALE = 60.0;
-	
+	private final static double MAX_ARM_SPEED = 0.8;
+
 	public Arm(VictorSP armLeft, VictorSP armRight, AnalogPotentiometer potLeft, AnalogPotentiometer potRight, VictorSP wheels) {
 		this.armLeft = armLeft;
 		this.armRight = armRight;
@@ -26,27 +27,27 @@ public class Arm {
 		state = ArmState.INITIAL;
 		stateNum = POT_INITIAL;
 	}
-	
+
 	public void intake() {
 		state = ArmState.INTAKE;
 	}
-	
+
 	public void rightAboveFloor() {
 		state = ArmState.RIGHT_ABOVE_FLOOR;
 	}
-	
+
 	public void switchPosition() {
 		state = ArmState.SWITCH;
 	}
-	
+
 	public void initial() {
 		state = ArmState.INITIAL;
 	}
-	
+
 	public void scale() {
 		state = ArmState.SCALE;
 	}
-	
+
 	public void update() {
 		if (state.equals(ArmState.INTAKE)) {
 			wheels.set(1.0);
@@ -67,12 +68,12 @@ public class Arm {
 				default:
 					break;
 			}
-			if (potLeft.get() < stateNum) armLeft.set(0.8);
-			else if (potLeft.get() > stateNum) armLeft.set(-0.8);
+			if (potLeft.get() < stateNum) armLeft.set(MAX_ARM_SPEED);
+			else if (potLeft.get() > stateNum) armLeft.set(-MAX_ARM_SPEED);
 			else armLeft.set(0.0);
-			
-			if (potRight.get() < stateNum) armRight.set(0.8);
-			else if (potRight.get() > stateNum) armRight.set(-0.8);
+
+			if (potRight.get() < stateNum) armRight.set(MAX_ARM_SPEED);
+			else if (potRight.get() > stateNum) armRight.set(-MAX_ARM_SPEED);
 			else armRight.set(0.0);
 		}
 	}
