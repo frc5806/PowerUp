@@ -38,6 +38,7 @@ public class Robot extends IterativeRobot {
 	SendableChooser<Command> chooser = new SendableChooser<>();
 
 	RobotDrive robotdrive;
+	DriveTrain drivetrain;
 	Joystick joy;
 	Encoder leftencoder;
 	Encoder rightencoder;
@@ -51,12 +52,12 @@ public class Robot extends IterativeRobot {
 	public void robotInit() {
 		//reader = new FileReader("/home/lvuser/TestFile");
 
-		robotdrive = new RobotDrive(1, 3);
+		drivetrain = new DriveTrain(1, 3);
 		joy = new Joystick(0);
 		
-		leftencoder = new Encoder(2,3);
-		rightencoder = new Encoder(0,1);
-//		rightencoder.setReverseDirection(true);
+		//leftencoder = new Encoder(0,1);
+		//rightencoder = new Encoder(2,3);
+		//leftencoder.setReverseDirection(true);
 				
 		System.out.println("INIT");
 	}
@@ -319,8 +320,8 @@ public class Robot extends IterativeRobot {
 		// teleop starts running. If you want the autonomous to
 		// continue until interrupted by another command, remove
 		// this line or comment it out.
-		leftencoder.reset();
-		rightencoder.reset();
+		//leftencoder.reset();
+		//rightencoder.reset();
 	}
 
 	/**
@@ -346,76 +347,19 @@ public class Robot extends IterativeRobot {
 	
 	@Override
 	public void teleopPeriodic() {
+		double forward = -joy.getRawAxis(1)*0.9;
+		double turn = -joy.getRawAxis(2);
+		forward = Math.abs(forward) > 0.1 ? forward : 0.0;
 		
+		double left = forward-turn*0.3;
+		double right = forward+turn*0.3;
+		drivetrain.setDistanceSpeeds(left, right);
 		
-		// TANK DRIVE
-//		if(Math.abs(joy.getRawAxis(3)) > 0.2){
-//			robotdrive.tankDrive(TANK_DRIVE_MAX*joy.getRawAxis(3),  TANK_DRIVE_MAX*-joy.getRawAxis(3));
-//		} else {
-//			robotdrive.tankDrive(TANK_DRIVE_MAX*joy.getRawAxis(1),  TANK_DRIVE_MAX*-joy.getRawAxis(5));
-//		}
-////		
-////		
-		//if (Math.abs(joy.getRawAxis(5)) > 0.1) {
-		double straightSpeed = -joy.getRawAxis(5);
-		
-		//if (Math.abs(joy.getRawAxis(0)) > 0.1) {
-		double turnSpeed = joy.getRawAxis(0);
-		
-		//Ignores slight movement in turn joystick
-		if (turnSpeed <= MIN_JOYSTICK_READ_TURN && turnSpeed >= -MIN_JOYSTICK_READ_TURN) {
-			turnSpeed = 0.0;
-		}
-//		} else if (turnSpeed > MIN_JOYSTICK_READ_TURN) {
-//			turnSpeed -= MIN_JOYSTICK_READ_TURN;
-//		} else if (turnSpeed < -MIN_JOYSTICK_READ_TURN) {
-//			turnSpeed += MIN_JOYSTICK_READ_TURN;
-//		}
-//		turnSpeed *= 1.0/(1.0 - MIN_JOYSTICK_READ_TURN);
-		
-		//Ignores slight movement in straight motion
-		if (straightSpeed <= MIN_JOYSTICK_READ_STRAIGHT && straightSpeed >= -MIN_JOYSTICK_READ_STRAIGHT) {
-			straightSpeed = 0.0;
-		}
-//		} else if (straightSpeed > MIN_JOYSTICK_READ_STRAIGHT) {
-//			straightSpeed -= MIN_JOYSTICK_READ_STRAIGHT;
-//		} else if (straightSpeed < -MIN_JOYSTICK_READ_STRAIGHT) {
-//			straightSpeed += MIN_JOYSTICK_READ_STRAIGHT;
-//		}
-//		straightSpeed *= 1.0/(1.0 - MIN_JOYSTICK_READ_STRAIGHT);
-		
-//		double desiredLeft = (straightSpeed - 2 * turnSpeed)/(1+Math.abs(2 * turnSpeed));
-//		double desiredRight = (straightSpeed + 2 * turnSpeed)/(1+Math.abs(2 * turnSpeed));
-		double desiredLeft = (straightSpeed - turnSpeed)/(1+Math.abs(turnSpeed));
-		double desiredRight = (straightSpeed + turnSpeed)/(1+Math.abs(turnSpeed));
-		//if (Math.abs(desiredLeft) <= 0.15) desiredLeft = 0;
-		//if (Math.abs(desiredRight) <= 0.15) desiredRight = 0;
-		
-		//System.out.println("Straight: " + straightSpeed + ", Turn: " + turnSpeed);
-		
-//		double encoderLeftInitial = (double)leftencoder.get();
-//		double encoderRightInitial = (double)rightencoder.get();
-//		Timer.delay(delay);
-		double encoderLeftFinal = (double)leftencoder.get();
-		double encoderRightFinal = (double)rightencoder.get();
-		
-		leftAvgSpeed = (0.5 * leftAvgSpeed) + 0.5 * leftencoder.getRate();/*(encoderLeftFinal - encoderLeftInitial)/(delay*MAX_ENCODERS_PER_SECOND)*/;
-		rightAvgSpeed = (0.5 * rightAvgSpeed) + 0.5 * rightencoder.getRate();/*(encoderRightFinal - encoderRightInitial)/(delay*MAX_ENCODERS_PER_SECOND)*/;
-		
-		double leftError = (desiredLeft * MAX_ENCODERS_PER_SECOND) - leftAvgSpeed;
-		double rightError =  (desiredRight * MAX_ENCODERS_PER_SECOND) - rightAvgSpeed;
-		
-		leftTotalError += ERROR_SENSITIVITY * leftError / MAX_ENCODERS_PER_SECOND;
-		rightTotalError += ERROR_SENSITIVITY * rightError / MAX_ENCODERS_PER_SECOND;
-		
-//		double leftChange = ACCELERATION_CONSTANT * leftError;
-//		double rightChange = ACCELERATION_CONSTANT * rightError;
-//		leftSpeed += leftChange;
-//		rightSpeed += rightChange;
-		
-		SmartDashboard.putNumber("LeftEncoder: ", encoderLeftFinal);
-		SmartDashboard.putNumber("RightEncoder: ", encoderRightFinal);
-		SmartDashboard.putNumber("DesiredLeft: ", desiredLeft);
+		SmartDashboard.putNumber("LeftEncoder: ", drivetrain.lEncoder.get());
+		SmartDashboard.putNumber("RightEncoder: ", drivetrain.rEncoder.get());
+		drivetrain.updateSubsystem();
+		drivetrain.updateDashboard();
+		/*SmartDashboard.putNumber("DesiredLeft: ", desiredLeft);
 		SmartDashboard.putNumber("DesiredRight: ", desiredRight);
 		SmartDashboard.putNumber("LeftAvgSpeed: ", leftAvgSpeed);
 		SmartDashboard.putNumber("rightAvgSpeed: ", rightAvgSpeed);
@@ -424,30 +368,7 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putNumber("LeftError: ", leftError);
 		SmartDashboard.putNumber("RightError: ", rightError);
 		SmartDashboard.putNumber("LeftTotalError: ", leftTotalError);
-		SmartDashboard.putNumber("RightTotalError: ", rightTotalError);
-//		SmartDashboard.putNumber("Error Difference (right minus left): ", rightError - leftError);
-//		SmartDashboard.putNumber("LeftSpeed: ", leftSpeed);
-//		SmartDashboard.putNumber("RightSpeed: ", rightSpeed);
-		
-//		System.out.println("LeftEncoder: " + encoderLeftFinal + "\nRightEncoder: " + encoderRightFinal);
-//		System.out.println("DesiredLeft: " + desiredLeft + "\nDesiredRight: " + desiredRight + "\n");
-//		System.out.println("StraightSpeed: " + straightSpeed + "\nTurnSpeed: " + turnSpeed + "\n");
-//		System.out.println("LeftError: " + leftError + "\nRightError: " + rightError + "\n");
-//		
-//		if (joy.getRawAxis(5) == 0) {
-//			leftSpeed = 0;
-//			rightSpeed = 0;
-//		}
-		
-//		robotdrive.tankDrive(leftSpeed, rightSpeed);
-		robotdrive.tankDrive(desiredLeft + leftTotalError, desiredRight + rightTotalError);
-		
-//		if (straightSpeed <= MIN_JOYSTICK_READ_STRAIGHT && straightSpeed >= -MIN_JOYSTICK_READ_STRAIGHT) {
-//			robotdrive.tankDrive(0,0);
-//			
-//		} else {
-//			robotdrive.tankDrive(teleopMaxVoltage*leftSpeed, teleopMaxVoltage*rightSpeed);
-//		}
+		SmartDashboard.putNumber("RightTotalError: ", rightTotalError);*/
 	}
 	
 
