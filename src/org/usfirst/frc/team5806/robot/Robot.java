@@ -40,14 +40,12 @@ public class Robot extends IterativeRobot {
 	RobotDrive robotdrive;
 	DriveTrain drivetrain;
 	Joystick joy;
-	Encoder leftencoder;
-	Encoder rightencoder;
-	static final double PERIOD_OF_OSCILLATION = 0.05;
-	static final double TICKS_PER_INCH = 7.676;
+//	Encoder leftencoder;
+//	Encoder rightencoder;
+//	static final double PERIOD_OF_OSCILLATION = 0.05;
+//	static final double TICKS_PER_INCH = 7.676;
 
-	
-		
-	double integral = 0.0;
+//	double integral = 0.0;
 	
 	public void robotInit() {
 		//reader = new FileReader("/home/lvuser/TestFile");
@@ -75,6 +73,7 @@ public class Robot extends IterativeRobot {
 
 	@Override
 	public void disabledPeriodic() {
+	
 	}
 	
 	@Override
@@ -82,14 +81,10 @@ public class Robot extends IterativeRobot {
 		drivetrain.goAuto();
 	}
 	
-	
-	
 	@Override
 	public void autonomousPeriodic() {
 		robotdrive.drive(0, 0);
 	}
-	
-	
 	
 	
 	/*public void turnTest(double degrees, double speed, double rampUpDegrees) {
@@ -164,26 +159,26 @@ public class Robot extends IterativeRobot {
 		//rightencoder.reset();
 	}
 
-	/**
-	 * This function is called periodically during operator control
-	 */
-	double delay = 0.05;
-	final double MIN_JOYSTICK_READ_STRAIGHT = 0.025; // Minimum registered axis movement from joystick. For forward/backward moving
-	final double MIN_JOYSTICK_READ_TURN = 0.025; // Same as above but for turning
-//	double correctionFactor = .4/400;
-	double teleopMaxVoltage = 1.0;
-	final double MAX_ENCODERS_PER_SECOND = 1000.0;
-	final double ERROR_SENSITIVITY = 0.02;
-	final double TANK_DRIVE_MAX = 0.75;
-//	double leftVolt = 0;
-//	double rightVolt = 0;
-
-//	double leftSpeed = 0.0;
-//	double rightSpeed = 0.0; 
-	double leftTotalError = 0.0;
-	double rightTotalError = 0.0;
-	double leftAvgSpeed = 0.0;
-	double rightAvgSpeed = 0.0;
+//	/**
+//	 * This function is called periodically during operator control
+//	 */
+//	double delay = 0.05;
+//	final double MIN_JOYSTICK_READ_STRAIGHT = 0.025; // Minimum registered axis movement from joystick. For forward/backward moving
+//	final double MIN_JOYSTICK_READ_TURN = 0.025; // Same as above but for turning
+////	double correctionFactor = .4/400;
+//	double teleopMaxVoltage = 1.0;
+//	final double MAX_ENCODERS_PER_SECOND = 1000.0;
+//	final double ERROR_SENSITIVITY = 0.02;
+//	final double TANK_DRIVE_MAX = 0.75;
+////	double leftVolt = 0;
+////	double rightVolt = 0;
+//
+////	double leftSpeed = 0.0;
+////	double rightSpeed = 0.0; 
+//	double leftTotalError = 0.0;
+//	double rightTotalError = 0.0;
+//	double leftAvgSpeed = 0.0;
+//	double rightAvgSpeed = 0.0;
 	
 	@Override
 	public void teleopPeriodic() {
@@ -197,7 +192,7 @@ public class Robot extends IterativeRobot {
 		
 		SmartDashboard.putNumber("LeftEncoder: ", drivetrain.lEncoder.get());
 		SmartDashboard.putNumber("RightEncoder: ", drivetrain.rEncoder.get());
-		drivetrain.updateSubsystem();
+		drivetrain.update();
 		drivetrain.updateDashboard();
 		/*SmartDashboard.putNumber("DesiredLeft: ", desiredLeft);
 		SmartDashboard.putNumber("DesiredRight: ", desiredRight);
