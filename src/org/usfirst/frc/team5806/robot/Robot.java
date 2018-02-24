@@ -40,6 +40,8 @@ public class Robot extends IterativeRobot {
 	RobotDrive robotdrive;
 	DriveTrain drivetrain;
 	Joystick joy;
+
+	DriveTrain.AutoPosition autoPosition = DriveTrain.AutoPosition.LEFT;
 	
 	public void robotInit() {
 
@@ -67,11 +69,32 @@ public class Robot extends IterativeRobot {
 	
 	@Override
 	public void autonomousInit() {
-		drivetrain.goAuto();
+		int retries = 100;
+		String gameData = DriverStation.getInstance().getGameSpecificMessage();
+		while (gameData.length() < 2 && retries > 0) {
+			retries--;
+			Timer.delay(0.01);
+			gameData = DriverStation.getInstance().getGameSpecificMessage();
+		}
+
+		boolean isSwitchLeft, isScaleLeft;
+		if (gameData.length() > 0) {
+			boolean isSwitchLeft = gameData.charAt(0) == 'L';
+			boolean isScaleLeft = gameData.charAt(1) == 'L';
+		} else {
+			return;
+		}
+
+		drivetrain.setupAuto(isSwitchLeft, autoPosition);
 	}
 	
 	@Override
 	public void autonomousPeriodic() {
+		while (updateAuto() == false) {
+			// do nothing
+		}
+
+		Timer.delay(0.05);
 		robotdrive.drive(0, 0);
 	}
 	
