@@ -326,12 +326,9 @@ public class DriveTrain {
 
 		double minVolt = 0.2;
 		double k1 = 1.0/(14*1.2);
-		double k2 = 0.6;
 		double k3 = 0.0;
 		double leftSpeed = 0.0;
 		double rightSpeed = 0.0;
-		double leftError = 0.0;
-		double rightError = 0.0;
 		double leftAccel = 0.0;
 		double rightAccel = 0.0;
 		double TICKS_SCALE = 1.0/100.0;
@@ -344,44 +341,19 @@ public class DriveTrain {
 			normalLeft = reader.right;
 		}
 
-		double errorBetween = 0.0;
-		double k4 = 0.00;
 		for (int i = 1; i < normalLeft.size(); i += 8) {
-			//System.out.println("Percent " + (i/(double)normalLeft.size()));
-			//System.out.println("Encoders " + leftencoder.get() + " " + rightencoder.get());
 			leftSpeed = normalLeft.get(i);
 			rightSpeed = normalRight.get(i);
-			//if (i <= normalLeft.size()-3) {
-			leftError = normalLeft.get(i+2)-(double)lEncoder.get()*TICKS_SCALE;
-			rightError = normalRight.get(i+2)-(double)rEncoder.get()*TICKS_SCALE;
-			//}
-			errorBetween = leftError - rightError;
 			leftAccel = normalLeft.get(i+1);
 			rightAccel = normalRight.get(i+1);
 
 			Timer.delay(0.01);
-			double leftVoltage = k1*leftSpeed+k2*leftError+k3*leftAccel-k4*errorBetween+minVolt;
-			double rightVoltage = k1*rightSpeed+k2*rightError+k3*rightAccel+k4*errorBetween+minVolt;
-			System.out.println("Target" + normalLeft.get(i+2) + " " + normalRight.get(i+2));
-			System.out.println("Error: " + leftError + " " + rightError);
-			//robotdrive.tankDrive(leftVoltage, rightVoltage);
-			motors[0].set(leftVoltage); motors[1].set(rightVoltage);
+			double leftVoltage = k1*leftSpeed+k3*leftAccel+minVolt;
+			double rightVoltage = k1*rightSpeed+k3*rightAccel+minVolt;
+			motors[0].set(leftVoltage); 
+			motors[1].set(rightVoltage);
 		}
-		//}*/ 
 		Timer.delay(0.05);
 		motors[0].set(0); motors[1].set(0);
 	}
-	
-// I don't know what this function is for. It was here. Just in case, I commented it out instead of deleting it. It is used no where else
-//
-//	public Map<Double, ArrayList<Double>> getPathMap(double[] pathArray) {
-//		Map<Double, ArrayList<Double>> pathmap = new HashMap<Double, ArrayList<Double>>();
-//		for(int i = 0; i < pathArray.length; i += 4) {
-//			ArrayList<Double> vel_pos = new ArrayList<Double>(2);
-//			vel_pos.add(Math.round(pathArray[i+1]*100.0)/100.0);
-//			vel_pos.add(Math.round(pathArray[i+2]*100.0)/100.0);
-//			pathmap.put(pathArray[i], vel_pos);
-//		}
-//		return pathmap;
-//	}
 }
