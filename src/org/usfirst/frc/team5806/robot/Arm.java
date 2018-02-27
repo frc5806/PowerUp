@@ -10,7 +10,6 @@ public class Arm {
 	private VictorSP armRight;
 	private Potentiometer potLeft;
 	private Potentiometer potRight;
-	private VictorSP wheels;
 	private ArmState state;
 	private double stateNum;
 	private double armDesiredSpeedLeft;
@@ -29,17 +28,12 @@ public class Arm {
 	public Arm(int victorPortLeft, int victorPortRight, int potPortLeft, int potPortRight, int wheelsPort) {
 		armLeft = new VictorSP(victorPortLeft);
 		armRight = new VictorSP(victorPortRight);
-		potLeft = new AnalogPotentiometer(potPortLeft, 360, 30);
-		potRight = new AnalogPotentiometer(potPortRight, 360, 30);
-		wheels = new VictorSP(wheelsPort);
+		potLeft = new AnalogPotentiometer(potPortLeft);
+		potRight = new AnalogPotentiometer(potPortRight);
 		state = ArmState.INITIAL;
 		stateNum = POT_INITIAL;
 		armSpeedLeft = 0;
 		armSpeedRight = 0;
-	}
-
-	public void intake() {
-		state = ArmState.INTAKE;
 	}
 
 	public void rightAboveFloor() {
@@ -59,27 +53,22 @@ public class Arm {
 	}
 
 	public void update() {
-		if (state.equals(ArmState.INTAKE)) {
-		wheels.set(1.0);
-		}
 
-		else {
-			switch(state) {
-				case INITIAL:
-					stateNum = POT_INITIAL;
-					break;
-				case RIGHT_ABOVE_FLOOR:
-					stateNum = POT_RIGHT_ABOVE_FLOOR;
-					break;
-				case SWITCH:
-					stateNum = POT_SWITCH;
-					break;
-				case SCALE:
-					stateNum = POT_SCALE;
-					break;
-				default:
-					break;
-			}
+		switch(state) {
+			case INITIAL:
+				stateNum = POT_INITIAL;
+				break;
+			case RIGHT_ABOVE_FLOOR:
+				stateNum = POT_RIGHT_ABOVE_FLOOR;
+				break;
+			case SWITCH:
+				stateNum = POT_SWITCH;
+				break;
+			case SCALE:
+				stateNum = POT_SCALE;
+				break;
+			default:
+				break;
 		}
 
 		if (potLeft.get() < stateNum) armDesiredSpeedLeft = MAX_ARM_SPEED;

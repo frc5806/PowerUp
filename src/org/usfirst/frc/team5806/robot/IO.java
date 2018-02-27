@@ -24,6 +24,7 @@ public class IO {
 		DoubleSolenoid leftPopper, DoubleSolenoid rightPopper, 
 		VictorSP leftWall, VictorSP rightWall,
 		VictorSP leftFlap, VictorSP rightFlap, double initialMotorSpeed) {
+		
 		motorSpeed = initialMotorSpeed;
 
 		this.left = left;
