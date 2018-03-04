@@ -47,6 +47,7 @@ public class Robot extends IterativeRobot {
 	DriveTrain drivetrain;
 	Compressor c;
 	Joystick joy;
+
 	Victor lift;
 	double stateNum = -1;
 	AnalogPotentiometer leftPot;
@@ -55,6 +56,8 @@ public class Robot extends IterativeRobot {
 	DoubleSolenoid air, air2, shifter;
 	ButtonHandler handler;
 	Victor front, back, dartR, dartL, winch1, winch2;
+
+	DriveTrain.AutoPosition autoPosition = DriveTrain.AutoPosition.LEFT;
 	
 	public void robotInit() {
 		drivetrain = new DriveTrain(4, 9);
@@ -103,14 +106,35 @@ public class Robot extends IterativeRobot {
 	
 	@Override
 	public void autonomousInit() {
-		drivetrain.goAuto();
+		int retries = 100;
+		String gameData = DriverStation.getInstance().getGameSpecificMessage();
+		while (gameData.length() < 2 && retries > 0) {
+			retries--;
+			Timer.delay(0.01);
+			gameData = DriverStation.getInstance().getGameSpecificMessage();
+		}
+
+		boolean isSwitchLeft, isScaleLeft;
+		if (gameData.length() > 0) {
+			boolean isSwitchLeft = gameData.charAt(0) == 'L';
+			boolean isScaleLeft = gameData.charAt(1) == 'L';
+		} else {
+			return;
+		}
+
+		drivetrain.setupAuto(isSwitchLeft, autoPosition);
 	}
 	
 	@Override
 	public void autonomousPeriodic() {
-		drivetrain.setSpeeds(0, 0);
-	}
+		while (updateAuto() == false) {
+			// do nothing
+		}
 
+		Timer.delay(0.05);
+		robotdrive.drive(0, 0);
+	}
+	
 	@Override
 	public void teleopInit() {
 

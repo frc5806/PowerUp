@@ -20,6 +20,14 @@ import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class DriveTrain {
+	enum AutoPosition {
+		LEFT, RIGHT, CENTER	
+	}
+
+	enum AutoState {
+		FORWARD, LEFT_SPLINE, RIGHT_SPLINE
+	}
+
 	static final double MAX_SPEED = 0.85;
 	static final double MIN_SPEED = 0.1;
 	static final double FORWARD_DAMPENING_THRESHOLD = 4*Math.PI/2.0;
@@ -36,11 +44,18 @@ public class DriveTrain {
 
 	// Auto
 	static final double VOLT_DAMP = 0.00055;
+	double MIN_VOLT = 0.2;
+	double K1 = 1.0/(14*1.2);
+	double K3 = 0.0;
 	
 	ArrayList<Double> normalLeft = new ArrayList<Double>();
 	ArrayList<Double> normalRight = new ArrayList<Double>();
 	
 	FileReader reader;
+
+	AutoState aState;
+
+	int splineCounter;
 	
 	double lEnc, rEnc, errorL, errorR, lDistSpeed, lRateAvg, lRateAvg2, rRateAvg, rRateAvg2, rDistSpeed, lastLTicks, lastRTicks, lastUpdate, lastLSpeed, lastRSpeed;
 
@@ -56,8 +71,8 @@ public class DriveTrain {
 	AHRS ahrs;
 
 	public DriveTrain(int left, int right) {
-		lEncoder = new Encoder(9, 8);
-		rEncoder = new Encoder(7, 6);
+		//lEncoder = new Encoder(9, 8);
+		//rEncoder = new Encoder(7, 6);
 		motors[0] = new VictorSP(left);
 		motors[0].setInverted(true);
 		motors[1] = new VictorSP(right);
@@ -76,12 +91,12 @@ public class DriveTrain {
 		ahrs = new AHRS(SPI.Port.kMXP);  	
 		ahrs.reset();
 
-		lEncoder.reset();
+		/*lEncoder.reset();
 		lEncoder.setDistancePerPulse(1);
 		rEncoder.reset();
 		rEncoder.setDistancePerPulse(1);
 		lEncoder.setReverseDirection(true);
-
+		*/
 		lastUpdate = Timer.getFPGATimestamp();
 		lastLTicks = lEncoder.get();
 		lastRTicks = rEncoder.get();
@@ -316,56 +331,29 @@ public class DriveTrain {
 	 * Autonomous
 	 */
 	
-	public void goAuto() {
+	public void setupAuto(boolean switchOnLeft, AutoPosition position) {
 		System.out.println("AUTO_INIT");
-		rEncoder.reset();
-		lEncoder.reset();
 
-		String gameData;
-		gameData = DriverStation.getInstance().getGameSpecificMessage();
-		/*if(gameData.charAt(0) == 'L')
-		{
-			//Put left auto code here
+		if (position == AutoPosition.RIGHT || position == AutoPosition.LEFT) {
+			aState = AutoState.FORWARD;	
 		} else {
-			//Put right auto code here
-		}*/
-		
-		motors[0].set(0.5); 
-		motors[1].set(0.5*1.05);
-		Timer.delay(5);
-		
-		
-		//driveFowardOLD(0.4, 0.8, 0.2, 0.2, 1000, 1);
-
-		/*try {
-			//goForward(1000, 0.8);
-			System.out.println("CALL_SPLINE");
-			spline(gameData.charAt(0));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}//*/
-		motors[0].set(0); 
-		motors[1].set(0);
+			setupSpline();
+			aState = switchOnLeft ? AutoState.LEFT_SPLINE : AutoState.RIGHT_SPLINE;	
+		}
 	}
-	
-	public void spline(char side) throws IOException {
-		System.out.println("AGAIN");
 
-		lEncoder.reset();
-		rEncoder.reset();
+	public boolean updateAuto() {
+		if(aState == AutoState.FORWARD) {
+			//TODO: update based on gyro
+			setSpeeds(0.7, 0.7);
+			Timer.delay(0.05);
+		} else {
+			nextSpline();
+		}
+	}
 
-		double minVolt = 0.2;
-		double k1 = 1.0/(14*1.2);
-		double k2 = 0.6;
-		double k3 = 0.0;
-		double leftSpeed = 0.0;
-		double rightSpeed = 0.0;
-		double leftError = 0.0;
-		double rightError = 0.0;
-		double leftAccel = 0.0;
-		double rightAccel = 0.0;
-		double TICKS_SCALE = 1.0/100.0;
-
+	public void setupSpline() {
+		splineCounter = 0;
 		if(side == 'L' || side == 'l') {
 			normalLeft = reader.left;
 			normalRight = reader.right;
@@ -373,33 +361,20 @@ public class DriveTrain {
 			normalRight = reader.left;
 			normalLeft = reader.right;
 		}
-
-		double errorBetween = 0.0;
-		double k4 = 0.00;
-		for (int i = 1; i < normalLeft.size(); i += 8) {
-			//System.out.println("Percent " + (i/(double)normalLeft.size()));
-			//System.out.println("Encoders " + leftencoder.get() + " " + rightencoder.get());
-			leftSpeed = normalLeft.get(i);
-			rightSpeed = normalRight.get(i);
-			//if (i <= normalLeft.size()-3) {
-			leftError = normalLeft.get(i+2)-(double)lEncoder.get()*TICKS_SCALE;
-			rightError = normalRight.get(i+2)-(double)rEncoder.get()*TICKS_SCALE;
-			//}
-			errorBetween = leftError - rightError;
-			leftAccel = normalLeft.get(i+1);
-			rightAccel = normalRight.get(i+1);
-
-			Timer.delay(0.01);
-			double leftVoltage = k1*leftSpeed+k2*leftError+k3*leftAccel-k4*errorBetween+minVolt;
-			double rightVoltage = k1*rightSpeed+k2*rightError+k3*rightAccel+k4*errorBetween+minVolt;
-			System.out.println("Target" + normalLeft.get(i+2) + " " + normalRight.get(i+2));
-			System.out.println("Error: " + leftError + " " + rightError);
-			//robotdrive.tankDrive(leftVoltage, rightVoltage);
-			motors[0].set(leftVoltage); motors[1].set(rightVoltage);
-		}
-		//}*/ 
-		Timer.delay(0.05);
-		motors[0].set(0); motors[1].set(0);
 	}
 	
+	public void nextSpline() {
+			leftSpeed = normalLeft.get(splineCounter);
+			rightSpeed = normalRight.get(splineCounter);
+			leftAccel = normalLeft.get(splineCounter+1);
+			rightAccel = normalRight.get(splineCounter+1);
+
+			double leftVoltage = K1*leftSpeed+K3*leftAccel+MIN_VOLT;
+			double rightVoltage = K1*rightSpeed+K3*rightAccel+MIN_VOLT;
+			motors[0].set(leftVoltage); 
+			motors[1].set(rightVoltage);
+
+			splineCounter += 8;
+			Timer.delay(0.01);
+	}
 }
