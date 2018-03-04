@@ -7,6 +7,11 @@ import java.util.Map;
 
 import com.kauailabs.navx.frc.AHRS;
 
+import edu.wpi.first.wpilibj.AnalogInput;
+import edu.wpi.first.wpilibj.AnalogTrigger;
+import edu.wpi.first.wpilibj.AnalogTriggerOutput;
+import edu.wpi.first.wpilibj.AnalogTriggerOutput.AnalogTriggerType;
+import edu.wpi.first.wpilibj.Counter;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.SPI;
@@ -27,13 +32,15 @@ public class DriveTrain {
 	static final double MIN_SPEED = 0.1;
 	static final double FORWARD_DAMPENING_THRESHOLD = 4*Math.PI/2.0;
 	static final double TURN_DAMPENING_THRESHOLD = 50.0;
-	static final double LEFT_ENCODER_TO_DIST = 4*Math.PI / 100.0;
-	static final double RIGHT_ENCODER_TO_DIST = 4*Math.PI / 100.0;
+	//static final double LEFT_ENCODER_TO_DIST = 4*Math.PI / 100.0;
+	//static final double RIGHT_ENCODER_TO_DIST = 4*Math.PI / 100.0;
 	static final double FORWARD_CORRECTION_FACTOR = 0.05;
 	static final double TURN_CORRECTION_FACTOR = 0.1;
-	static final int TOP_TICKS_PER_SECOND = 1300;
+	static final double LEFT_TICKS_PER_SECOND = 900;
+	static final double RIGHT_TICKS_PER_SECOND = (6150.0/5570.0)*LEFT_TICKS_PER_SECOND;
 	static final double RATE_TO_SPEED_LEFT = 500;
 	static final double RATE_TO_SPEED_RIGHT = 500;
+	static final double RIGHT_STARTER = 1.05;
 
 	// Auto
 	static final double VOLT_DAMP = 0.00055;
@@ -50,21 +57,34 @@ public class DriveTrain {
 
 	int splineCounter;
 	
-	double lEnc, rEnc, lDistSpeed, lRateAvg, lRateAvg2, rRateAvg, rRateAvg2, rDistSpeed, lastLTicks, lastRTicks, lastUpdate, lastLSpeed, lBaseSpeed, rBaseSpeed, lastRSpeed;
+	double lEnc, rEnc, errorL, errorR, lDistSpeed, lRateAvg, lRateAvg2, rRateAvg, rRateAvg2, rDistSpeed, lastLTicks, lastRTicks, lastUpdate, lastLSpeed, lastRSpeed;
 
 	Encoder lEncoder;
 	Encoder rEncoder;
+	AnalogTrigger rTrigger1, rTrigger2, lTrigger;
+	AnalogInput a1;
+	Counter rMag1, rMag2;
+	
 	VictorSP[] motors = new VictorSP[2];
 
 
 	AHRS ahrs;
 
 	public DriveTrain(int left, int right) {
-		//lEncoder = new Encoder(0, 1);
-		//rEncoder = new Encoder(2, 3);
+		//lEncoder = new Encoder(9, 8);
+		//rEncoder = new Encoder(7, 6);
 		motors[0] = new VictorSP(left);
 		motors[0].setInverted(true);
 		motors[1] = new VictorSP(right);
+		motors[1].setInverted(false);
+		
+		//a1 = new AnalogInput(2);
+		AnalogTrigger rTrigger1 = new AnalogTrigger(2);
+		AnalogTrigger rTrigger2 = new AnalogTrigger(3);
+		rTrigger1.setLimitsVoltage(1, 3.0);
+		rTrigger2.setLimitsVoltage(1, 3.0);
+		rMag1 = new Counter(rTrigger1);
+		rMag2 = new Counter(rTrigger2);
 
 		for (VictorSP motor:motors) motor.set(0);
 
@@ -81,8 +101,6 @@ public class DriveTrain {
 		lastLTicks = lEncoder.get();
 		lastRTicks = rEncoder.get();
 
-		lBaseSpeed = 0.0;
-		rBaseSpeed = 0.0;
 		lastLSpeed = 0.0;
 		lastRSpeed = 0.0;
 		lRateAvg = 0.0;
@@ -169,9 +187,9 @@ public class DriveTrain {
 		setLeft(speed);
 		setRight(speed);
 		do {
-			distanceTraveled = ((Math.abs(lEncoder.get()*LEFT_ENCODER_TO_DIST)+Math.abs(rEncoder.get()*RIGHT_ENCODER_TO_DIST)) / 2.0);
+			distanceTraveled = ((Math.abs(lEncoder.get()/LEFT_TICKS_PER_SECOND)+Math.abs(rEncoder.get()/RIGHT_TICKS_PER_SECOND)) / 2.0);
 
-			double speedCorrection = FORWARD_CORRECTION_FACTOR * (Math.abs(lEncoder.get()*LEFT_ENCODER_TO_DIST)-Math.abs(rEncoder.get()*RIGHT_ENCODER_TO_DIST));
+			double speedCorrection = FORWARD_CORRECTION_FACTOR * (Math.abs(lEncoder.get()/LEFT_TICKS_PER_SECOND)-Math.abs(rEncoder.get()/RIGHT_TICKS_PER_SECOND));
 			speedCorrection = Math.min(Math.max(speedCorrection, -speed), speed);
 			setLeft(direction*(speed-speedCorrection));
 			setRight(direction*(speed+speedCorrection));
@@ -189,6 +207,7 @@ public class DriveTrain {
 				speed = minSpeed + ((maxSpeed - minSpeed) * (error / deaccelLength));
 			}
 			updateDashboard();
+			System.out.println(distanceTraveled);
 		} while(distanceTraveled < distance);
 		setLeft(0);
 		setRight(0);
@@ -208,7 +227,7 @@ public class DriveTrain {
 		do { 
 			degreesTurned = Math.abs(ahrs.getAngle() - startingAngle);
 
-			double speedCorrection = TURN_CORRECTION_FACTOR * (Math.abs(lEncoder.get()*LEFT_ENCODER_TO_DIST)-Math.abs(rEncoder.get()*RIGHT_ENCODER_TO_DIST));
+			double speedCorrection = TURN_CORRECTION_FACTOR * (Math.abs(lEncoder.get()*LEFT_TICKS_PER_SECOND)-Math.abs(rEncoder.get()*RIGHT_TICKS_PER_SECOND));
 			speedCorrection = Math.min(Math.max(speedCorrection, -speed), speed);
 			//speedCorrection = 0;
 			setLeft(direction*Math.max((speed-speedCorrection), 0));
@@ -249,61 +268,64 @@ public class DriveTrain {
 
 	public void setDistanceSpeeds(double lSpeed, double rSpeed) {
 		this.lDistSpeed = lSpeed;
-		this.rDistSpeed = 0.98*rSpeed;
-		lBaseSpeed = lDistSpeed*TOP_TICKS_PER_SECOND*RATE_TO_SPEED_LEFT;
-		rBaseSpeed = rDistSpeed*TOP_TICKS_PER_SECOND*RATE_TO_SPEED_RIGHT;
+		this.rDistSpeed = rSpeed;
 	}
 
 	public void updateDashboard() {
-		SmartDashboard.putNumber("angle", ahrs.getAngle());
 		SmartDashboard.putNumber("leftEncoer", lEncoder.get());
 		SmartDashboard.putNumber("rightEncoder", rEncoder.get());
-		SmartDashboard.putNumber("leftEncoderDist", lEncoder.get()*LEFT_ENCODER_TO_DIST);
-		SmartDashboard.putNumber("rightEncoderDist", rEncoder.get()*RIGHT_ENCODER_TO_DIST);
-		SmartDashboard.putBoolean("leftEncoderStopped", lEncoder.getStopped());
-		SmartDashboard.putBoolean("rightEncoderStopped", rEncoder.getStopped());
+		SmartDashboard.putNumber("lChange", lastLSpeed);
+		SmartDashboard.putNumber("rChange", lastRSpeed);
 		SmartDashboard.putNumber("lSpeed", motors[0].get());
 		SmartDashboard.putNumber("rSpeed", motors[1].get());
-		SmartDashboard.putNumber("lSpeedAvg", lRateAvg2);
-		SmartDashboard.putNumber("rSpeedAvg", rRateAvg2);
-		SmartDashboard.putNumber("desiredLSpeed", lastLSpeed+lBaseSpeed);
-		SmartDashboard.putNumber("desiredRSpeed", (double)lastRSpeed+rBaseSpeed);
-		SmartDashboard.putNumber("desireddddLSpeed", lDistSpeed*TOP_TICKS_PER_SECOND);
-		SmartDashboard.putNumber("desireddddRSpeed", rDistSpeed*TOP_TICKS_PER_SECOND);
-		SmartDashboard.putNumber("lDistSpeed", lDistSpeed);
-		SmartDashboard.putNumber("rDistSpeed", rDistSpeed);
-		SmartDashboard.putNumber("lBaseSpeed", lBaseSpeed);
-		SmartDashboard.putNumber("rBaseSpeed", rBaseSpeed);
-		SmartDashboard.putNumber("lastLSpeed", lastLSpeed);
-		SmartDashboard.putNumber("lastRSpeed", lastRSpeed);
-		SmartDashboard.putNumber("lastLTicks", lastLTicks);
-		SmartDashboard.putNumber("lRate", lEncoder.getRate());
-		SmartDashboard.putNumber("rRate", rEncoder.getRate());
-		SmartDashboard.putNumber("lastRTicks", lastRTicks);
-
-		lRateAvg2 = lRateAvg2*0.95 + lEncoder.getRate()*0.05;
-		rRateAvg2 = rRateAvg2*0.95 + rEncoder.getRate()*0.05;
-
+		SmartDashboard.putNumber("lSpeedAvg", lRateAvg);
+		SmartDashboard.putNumber("rSpeedAvg", rRateAvg);
+		SmartDashboard.putNumber("errorinavgpercent", (rRateAvg*(5570.0/6150.0)-lRateAvg)/(lRateAvg));
+		SmartDashboard.putNumber("errorinavg", (rRateAvg*(5570.0/6150.0)-lRateAvg));
+		
+		SmartDashboard.putNumber("rMag1", rMag1.get());
+		SmartDashboard.putNumber("rMag2", rMag2.get());
 	}
-
+	
 	public void stop() {
 		for (VictorSP motor : motors) motor.stopMotor();
 	}
 
 	public void update() {
-		lRateAvg = lRateAvg*0.5 + lEncoder.getRate()*0.5;
-		rRateAvg = rRateAvg*0.5 + rEncoder.getRate()*0.5;
-		double errorL = lDistSpeed*TOP_TICKS_PER_SECOND - lRateAvg;
-		lastLSpeed += 0.05 * errorL / (double)(TOP_TICKS_PER_SECOND);
-		setLeft(lastLSpeed+lDistSpeed);
-		lastLTicks = lEncoder.get();
+		lRateAvg = lRateAvg*0.6 + ((lEncoder.get() - lastLTicks)/(Timer.getFPGATimestamp()-lastUpdate))*0.4;
+		rRateAvg = rRateAvg*0.6 + ((rEncoder.get() - lastRTicks)/(Timer.getFPGATimestamp()-lastUpdate))*0.4;
 
-		double errorR = rDistSpeed*TOP_TICKS_PER_SECOND - rRateAvg;
-		lastRSpeed += 0.05 * errorR / (double)(TOP_TICKS_PER_SECOND);
+		double errorL = lDistSpeed*LEFT_TICKS_PER_SECOND - lRateAvg;
+		lastLSpeed += 0.05 * errorL / (double)(LEFT_TICKS_PER_SECOND);
+		setLeft(lastLSpeed+lDistSpeed);
+
+		double errorR = rDistSpeed*RIGHT_TICKS_PER_SECOND - rRateAvg;
+		lastRSpeed += 0.05 * errorR / (double)(RIGHT_TICKS_PER_SECOND);
 		setRight(lastRSpeed+rDistSpeed);
+	
+		lastLTicks = lEncoder.get();
 		lastRTicks = rEncoder.get();
 		lastUpdate = Timer.getFPGATimestamp();
+		
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
 	/*
 	 * Autonomous
