@@ -109,6 +109,9 @@ public class DriveTrain {
 		reader = new FileReader("/home/lvuser/TestFile");
 	}
 
+	
+	/*TELEOP*/
+
 	private void setLeft(double speed) {
 		motors[0].set(speed);
 	}
@@ -116,145 +119,6 @@ public class DriveTrain {
 	private void setRight(double speed) {
 		motors[1].set(speed);
 	}
-
-	public void goForwardNEW(double distance, double maxSpeed) {
-		lEncoder.reset();
-		rEncoder.reset();
-
-		double leftVolt = maxSpeed;
-		double rightVolt = maxSpeed;
-
-		double Ku = 0.25 * (0.0007/VOLT_DAMP); // In seconds
-		double Tu = 0.25 * (0.0007/VOLT_DAMP); // In seconds
-		double RAMP_UP_TICKS = 200;
-		double MIN_SPEED_UP = 0.5;
-		double MIN_SPEED_DOWN = 0.5;
-		double volt = 0.0;
-		double errorAccumulation = 0.0;
-		double errorDamp = 1.25;
-		double integral = 0.0;
-		double I = (VOLT_DAMP/0.6) * 1.2 * (Ku/Tu);
-		double error = 0.0;
-		double prevError = 0.0;
-		double prevTime = 0.0;
-		double curTime = 1000.0*System.currentTimeMillis();
-		double derivative = 0.0;
-		double D = (VOLT_DAMP/0.6) * (3.0*Ku*Tu/40.0);
-
-		while (lEncoder.get()/2 + rEncoder.get()/2 < distance) {
-			motors[0].set(leftVolt); motors[1].set(rightVolt);
-			double ticksTraveled = (lEncoder.get()/2 + rEncoder.get()/2);
-
-			double encoderLeft = lEncoder.get();
-			double encoderRight = rEncoder.get();
-			SmartDashboard.putNumber("leftEncoders", encoderLeft);
-			SmartDashboard.putNumber("rightEncoders", encoderRight);
-
-			Timer.delay(0.01);
-
-			prevError = error;
-			error = encoderLeft-encoderRight;
-			//if (integral*error < 0.0) integral = 0.0;
-			integral += error*0.2;
-			errorAccumulation += error*VOLT_DAMP*Ku;
-			if (ticksTraveled > 0.0 && ticksTraveled < RAMP_UP_TICKS) {
-				volt = MIN_SPEED_UP + (maxSpeed-MIN_SPEED_UP)*(ticksTraveled/RAMP_UP_TICKS);
-			} else if (ticksTraveled >= distance - RAMP_UP_TICKS) {
-				volt = MIN_SPEED_DOWN + (maxSpeed-MIN_SPEED_DOWN)*(distance-ticksTraveled)/(distance-RAMP_UP_TICKS);
-			} else {
-				volt = maxSpeed;
-			}
-
-			prevTime = curTime;
-			curTime = 1000.0*System.currentTimeMillis();
-			derivative = (error - prevError)/(curTime - prevTime);
-
-			leftVolt = volt - errorAccumulation + I*integral + D*derivative;
-			rightVolt = volt + errorAccumulation + I*integral + D*derivative;
-		} 
-		motors[0].set(0); motors[1].set(0);
-		return;
-	}
-
-	// Don't try negative speed for now
-	public void driveFowardOLD(double maxSpeed, double minSpeed, double accelLength, double deaccelLength, double distance, double direction) {
-		lEncoder.reset();
-		rEncoder.reset();
-
-		double speed = minSpeed;
-		double distanceTraveled;
-
-		setLeft(speed);
-		setRight(speed);
-		do {
-			distanceTraveled = ((Math.abs(lEncoder.get()/LEFT_TICKS_PER_SECOND)+Math.abs(rEncoder.get()/RIGHT_TICKS_PER_SECOND)) / 2.0);
-
-			double speedCorrection = FORWARD_CORRECTION_FACTOR * (Math.abs(lEncoder.get()/LEFT_TICKS_PER_SECOND)-Math.abs(rEncoder.get()/RIGHT_TICKS_PER_SECOND));
-			speedCorrection = Math.min(Math.max(speedCorrection, -speed), speed);
-			setLeft(direction*(speed-speedCorrection));
-			setRight(direction*(speed+speedCorrection));
-
-			SmartDashboard.putNumber("speedCorrection", speedCorrection);
-			SmartDashboard.putNumber("spppppeeed", speed);
-			SmartDashboard.putNumber("leftMotor", speed-speedCorrection);
-			SmartDashboard.putNumber("rightMotor", speed+speedCorrection);
-			SmartDashboard.putNumber("distanceTraveled", distanceTraveled);
-			double error = Math.abs(distance-distanceTraveled) / Math.abs(distance);
-			if(1-error < accelLength) {
-				speed = minSpeed + ((maxSpeed - minSpeed) * ((1-error) / accelLength));
-			}
-			if(error < deaccelLength) {
-				speed = minSpeed + ((maxSpeed - minSpeed) * (error / deaccelLength));
-			}
-			updateDashboard();
-			System.out.println(distanceTraveled);
-		} while(distanceTraveled < distance);
-		setLeft(0);
-		setRight(0);
-	}
-
-	/**
-	 * Set speed to negative to turn the opposite direction.
-	 */
-	// Don't try negative speed for now
-	public void turn(double maxSpeed, double minSpeed, double accelLength, double deaccelLength, double degrees, double direction) {
-		lEncoder.reset();
-		rEncoder.reset();
-
-		double startingAngle = ahrs.getAngle();
-		double speed = minSpeed;
-		double degreesTurned;
-		do { 
-			degreesTurned = Math.abs(ahrs.getAngle() - startingAngle);
-
-			double speedCorrection = TURN_CORRECTION_FACTOR * (Math.abs(lEncoder.get()*LEFT_TICKS_PER_SECOND)-Math.abs(rEncoder.get()*RIGHT_TICKS_PER_SECOND));
-			speedCorrection = Math.min(Math.max(speedCorrection, -speed), speed);
-			//speedCorrection = 0;
-			setLeft(direction*Math.max((speed-speedCorrection), 0));
-			setRight(direction*Math.min(-(speed+speedCorrection), 0));
-
-			double error = Math.abs(degrees-degreesTurned) / Math.abs(degrees);
-			if(1-error < accelLength) {
-				speed = minSpeed + ((maxSpeed - minSpeed) * (1-error) / accelLength);
-			}
-			if(error < deaccelLength) {
-				speed = minSpeed + ((maxSpeed - minSpeed) * error / deaccelLength);
-			}
-
-			SmartDashboard.putNumber("speedCorrection", speedCorrection);
-			SmartDashboard.putNumber("spppppeeed", speed);
-			SmartDashboard.putNumber("leftMotor", speed-speedCorrection);
-			SmartDashboard.putNumber("rightMotor", speed+speedCorrection);
-			SmartDashboard.putNumber("degreesTurned", degreesTurned);
-			updateDashboard();
-		} while(degreesTurned < degrees);
-		setLeft(0);
-		setRight(0);
-	}
-	
-	/*
-	 * Teleop:
-	 */
 
 	public void setSpeeds(double lSpeed, double rSpeed) {
 		/*if(Math.abs(lSpeed) < MIN_SPEED) lSpeed = 0;
@@ -309,28 +173,8 @@ public class DriveTrain {
 		
 	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 
-	/*
-	 * Autonomous
-	 */
-	
+	/*AUTO*/
 	public void setupAuto(boolean switchOnLeft, AutoPosition position) {
 		System.out.println("AUTO_INIT");
 
@@ -376,5 +220,125 @@ public class DriveTrain {
 
 			splineCounter += 8;
 			Timer.delay(0.01);
+	}
+
+	/* MOVE ROUTINES */
+	// Don't try negative speed for now
+	public void driveFowardEncoders(double maxSpeed, double minSpeed, double accelLength, double deaccelLength, double distance, double direction) {
+		lEncoder.reset();
+		rEncoder.reset();
+
+		double speed = minSpeed;
+		double distanceTraveled;
+
+		setLeft(speed);
+		setRight(speed);
+		do {
+			distanceTraveled = ((Math.abs(lEncoder.get()/LEFT_TICKS_PER_SECOND)+Math.abs(rEncoder.get()/RIGHT_TICKS_PER_SECOND)) / 2.0);
+
+			double speedCorrection = FORWARD_CORRECTION_FACTOR * (Math.abs(lEncoder.get()/LEFT_TICKS_PER_SECOND)-Math.abs(rEncoder.get()/RIGHT_TICKS_PER_SECOND));
+			speedCorrection = Math.min(Math.max(speedCorrection, -speed), speed);
+			setLeft(direction*(speed-speedCorrection));
+			setRight(direction*(speed+speedCorrection));
+
+			SmartDashboard.putNumber("speedCorrection", speedCorrection);
+			SmartDashboard.putNumber("spppppeeed", speed);
+			SmartDashboard.putNumber("leftMotor", speed-speedCorrection);
+			SmartDashboard.putNumber("rightMotor", speed+speedCorrection);
+			SmartDashboard.putNumber("distanceTraveled", distanceTraveled);
+			double error = Math.abs(distance-distanceTraveled) / Math.abs(distance);
+			if(1-error < accelLength) {
+				speed = minSpeed + ((maxSpeed - minSpeed) * ((1-error) / accelLength));
+			}
+			if(error < deaccelLength) {
+				speed = minSpeed + ((maxSpeed - minSpeed) * (error / deaccelLength));
+			}
+			updateDashboard();
+			System.out.println(distanceTraveled);
+		} while(distanceTraveled < distance);
+		setLeft(0);
+		setRight(0);
+	}
+	public void driveFowardGyro(double speed, double time, double direction) {
+		double startingAngle = ahrs.getAngle();
+		setLeft(speed);
+		setRight(speed);
+		do {
+			degreesTurned = Math.abs(ahrs.getAngle() - startingAngle);
+
+			double speedCorrection = 0.05*degreesTurned;
+			setLeft(direction*(speed-speedCorrection));
+			setRight(direction*(speed+speedCorrection));
+
+			Timer.delay(0.01);
+		} while(distanceTraveled < distance);
+		Timer.delay(0.02);
+		setLeft(0);
+		setRight(0);
+	}
+
+	/**
+	 * Set speed to negative to turn the opposite direction.
+	 */
+	// Don't try negative speed for now
+	public void turnEncoders(double maxSpeed, double minSpeed, double accelLength, double deaccelLength, double degrees, double direction) {
+		lEncoder.reset();
+		rEncoder.reset();
+
+		double startingAngle = ahrs.getAngle();
+		double speed = minSpeed;
+		double degreesTurned;
+		do { 
+			degreesTurned = Math.abs(ahrs.getAngle() - startingAngle);
+
+			double speedCorrection = TURN_CORRECTION_FACTOR * (Math.abs(lEncoder.get()*LEFT_TICKS_PER_SECOND)-Math.abs(rEncoder.get()*RIGHT_TICKS_PER_SECOND));
+			speedCorrection = Math.min(Math.max(speedCorrection, -speed), speed);
+			//speedCorrection = 0;
+			setLeft(direction*Math.max((speed-speedCorrection), 0));
+			setRight(direction*Math.min(-(speed+speedCorrection), 0));
+
+			double error = Math.abs(degrees-degreesTurned) / Math.abs(degrees);
+			if(1-error < accelLength) {
+				speed = minSpeed + ((maxSpeed - minSpeed) * (1-error) / accelLength);
+			}
+			if(error < deaccelLength) {
+				speed = minSpeed + ((maxSpeed - minSpeed) * error / deaccelLength);
+			}
+
+			SmartDashboard.putNumber("speedCorrection", speedCorrection);
+			SmartDashboard.putNumber("spppppeeed", speed);
+			SmartDashboard.putNumber("leftMotor", speed-speedCorrection);
+			SmartDashboard.putNumber("rightMotor", speed+speedCorrection);
+			SmartDashboard.putNumber("degreesTurned", degreesTurned);
+			updateDashboard();
+		} while(degreesTurned < degrees);
+		setLeft(0);
+		setRight(0);
+	}
+	public void turn(double maxSpeed, double minSpeed, double accelLength, double deaccelLength, double degrees, double direction) {
+
+		double startingAngle = ahrs.getAngle();
+		double speed = minSpeed;
+		double degreesTurned;
+		do { 
+			degreesTurned = Math.abs(ahrs.getAngle() - startingAngle);
+
+			setLeft(direction*speed);
+			setRight(direction*-speed);
+
+			double error = Math.abs(degrees-degreesTurned) / Math.abs(degrees);
+			if(1-error < accelLength) {
+				speed = minSpeed + ((maxSpeed - minSpeed) * (1-error) / accelLength);
+			} else if(error < deaccelLength) {
+				speed = minSpeed + ((maxSpeed - minSpeed) * error / deaccelLength);
+			} else {
+				speed = maxSpeed;
+			}
+
+			Timer.delay(0.01);
+		} while(degreesTurned < degrees);
+		Timer.delay(0.02);
+		setLeft(0);
+		setRight(0);
 	}
 }
