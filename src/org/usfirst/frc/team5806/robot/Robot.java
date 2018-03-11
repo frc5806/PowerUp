@@ -46,23 +46,24 @@ public class Robot extends IterativeRobot {
 	RobotDrive robotdrive;
 	DriveTrain drivetrain;
 	Compressor c;
-	Joystick joy;
+	Joystick joyDrive, joyOp;
+
+	double dartStateNum = -1;
+	boolean isLowGear = true;
 
 	Victor lift;
-	double stateNum = -1;
 	AnalogPotentiometer leftPot;
 	AnalogPotentiometer rightPot;
 	Solenoid left, right;
 	DoubleSolenoid air, air2, shifter;
-	ButtonHandler handler;
 	Victor front, back, dartR, dartL, winch1, winch2;
 
 	DriveTrain.AutoPosition autoPosition = DriveTrain.AutoPosition.LEFT;
 	
 	public void robotInit() {
 		drivetrain = new DriveTrain(4, 9);
-		joy = new Joystick(0);
-		handler = new ButtonHandler(joy);
+		joyDrive = new Joystick(0);
+		joyOp = new Joystick(1);
 		c = new Compressor();
 		c.start();
 
@@ -149,30 +150,42 @@ public class Robot extends IterativeRobot {
 	
 	@Override
 	public void teleopPeriodic() {
-		double forward = -joy.getRawAxis(1)*0.9;
-		double turn = -joy.getRawAxis(4);
+		/*DRIVER*/
+		double forward = -joyDrive.getRawAxis(1)*0.9;
+		double turn = -joyDrive.getRawAxis(4);
 		forward = Math.abs(forward) > 0.1 ? forward : 0.0;
 		
 		double leftD = forward-turn*0.9;
 		double rightD = forward+turn*0.9;
 		//drivetrain.setDistanceSpeeds(leftD, rightD);
-		//drivetrain.setDistanceSpeeds(-joy.getRawAxis(1), -joy.getRawAxis(3));
+		//drivetrain.setDistanceSpeeds(-joyDrive.getRawAxis(1), -joyDrive.getRawAxis(3));
 		//drivetrain.setSpeeds(leftD, (rightD < 0 ? rightD : rightD*1.05));
-		//drivetrain.setSpeeds(-joy.getRawAxis(1), -joy.getRawAxis(3));
+		//drivetrain.setSpeeds(-joyDrive.getRawAxis(1), -joyDrive.getRawAxis(3));
+
+		if(joyDrive.getRawAxis(2) > 0.7) {
+			isLowGear = true;
+		} 
+		if(joyDrive.getRawAxis(3) > 0.7) {
+			isLowGear = false;
+		}
+		if(isLowGear) {
+			shifter.set(DoubleSolenoid.Value.kForward);
+		} else {
+			shifter.set(DoubleSolenoid.Value.kReverse);
+		}
 		
-		if(joy.getRawAxis(3) > 0.7) {
+		/*OPERATOR*/
+		// Hard pop 
+		if(joyOp.getRawAxis(3) > 0.7) {
 			left.set(true);
 			right.set(true);
-			/*Timer.delay(0.04);
-			left.set(false);
-			right.set(false);
-			Timer.delay(1);*/
 			System.out.println("fire");
 		} else {
 			left.set(false);
 			right.set(false);
 		}
-		if(joy.getRawButton(4)) {
+		// Soft pop
+		if(joyOp.getRawAxis(2) > 0.7) {
 			left.set(true);
 			right.set(true);
 			Timer.delay(0.04);
@@ -181,35 +194,32 @@ public class Robot extends IterativeRobot {
 			Timer.delay(0.5);
 		}
 		
-		if(joy.getRawAxis(2) > 0.7) {
+		// Swing out intake
+		if(joyOp.getRawButton(4)) {
 			air.set(DoubleSolenoid.Value.kForward);
 			air2.set(DoubleSolenoid.Value.kForward);
 		} else {
 			air.set(DoubleSolenoid.Value.kReverse);
 			air2.set(DoubleSolenoid.Value.kReverse);
 		}
-		
-		if(joy.getRawButton(3)) {
-			//shifter.set(DoubleSolenoid.Value.kReverse);
-		} else {
-			shifter.set(DoubleSolenoid.Value.kForward);
+			
+		// Darts
+		if(joyOp.getRawButton(1)) {
+			dartStateNum = 0.02;
 		}
-		
-		if(joy.getRawButton(1)) {
-			stateNum = 0.02;
+		if(joyOp.getRawButton(2)) {
+			dartStateNum = 0.38;
 		}
-		if(joy.getRawButton(2)) {
-			stateNum = 0.38;
+		if(joyOp.getRawButton(3)) {
+			dartStateNum = 0.56;
 		}
-		if(joy.getRawButton(3)) {
-			stateNum = 0.56;
-		}
-		System.out.println(stateNum);
+		System.out.println(dartStateNum);
 	
-		if(joy.getRawButton(6)) {
+		// IO wheels 
+		if(joyOp.getRawButton(6)) {
 			front.set(1);
 			back.set(1);
-		} else if(joy.getRawButton(5)) {
+		} else if(joyOp.getRawButton(5)) {
 			front.set(-0.3);
 			back.set(-1);
 		} else {
@@ -217,10 +227,11 @@ public class Robot extends IterativeRobot {
 			back.set(0);
 		}
 		
-		if(joy.getPOV() == 0 || joy.getPOV() == 315 || joy.getPOV() == 45) {
+		// Climb
+		if(joyOp.getPOV() == 0 || joyOp.getPOV() == 315 || joyOp.getPOV() == 45) {
 			winch1.set(0.6);
 			winch2.set(0.6);
-		} else if(joy.getPOV() == 180) {
+		} else if(joyOp.getPOV() == 180 || joyOp.getPOV() == 225 || joyOp.getPOV() == 135) {
 			winch1.set(-0.6);
 			winch2.set(-0.6);
 		} else {
@@ -228,11 +239,11 @@ public class Robot extends IterativeRobot {
 			winch2.set(0);
 		}
 		
-		double rightP = rightPot.get();
+		/*double rightP = rightPot.get();
 		double leftP = leftPot.get();
 		double dampConst = 1.0/0.99;
 		double error = leftP-(rightP*dampConst-0.01);
-		double move = -joy.getRawAxis(1);
+		double move = -joyOp.getRawAxis(1);
 		
 		double moveR = move+error*8;
 		double moveL = move-error*8;
@@ -241,14 +252,14 @@ public class Robot extends IterativeRobot {
 		else dartR.set(0);
 		
 		if((leftP > 0.03 || moveL > 0) && (leftP < 0.58 || moveL < 0)) dartL.set(moveL);
-		else dartL.set(0);
+		else dartL.set(0);*/
 		
 		/*double rightP = rightPot.get();
 		double leftP = leftPot.get();
-		if(stateNum > 0 && Math.abs(rightP-stateNum) > 0.02) {
+		if(dartStateNum > 0 && Math.abs(rightP-dartStateNum) > 0.02) {
 			double dampConst = 1.0/0.99;
 			double error = leftP-(rightP*dampConst-0.01);
-			double move = Math.abs(rightP-stateNum) > 0.1 ? 0.7*Math.signum(stateNum-rightP) : 0.4*Math.signum(stateNum-rightP);
+			double move = Math.abs(rightP-dartStateNum) > 0.1 ? 0.7*Math.signum(dartStateNum-rightP) : 0.4*Math.signum(dartStateNum-rightP);
 			
 			double moveR = move+error*8;
 			double moveL = move-error*8;
@@ -274,6 +285,7 @@ public class Robot extends IterativeRobot {
 		
 		// 0.05 - 0.57
 		SmartDashboard.putNumber("leftPot", leftPot.get());
+
 		//drivetrain.update();
 		drivetrain.updateDashboard();
 		Timer.delay(0.05);
