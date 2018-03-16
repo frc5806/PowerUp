@@ -56,8 +56,14 @@ public class Robot extends IterativeRobot {
 	Solenoid left, right;
 	DoubleSolenoid air, air2, shifter;
 	Victor front, back, dartR, dartL, winch1, winch2;
-
-	DriveTrain.AutoPosition autoPosition = DriveTrain.AutoPosition.LEFT;
+	
+	double BOTTOM = 0.02;
+	double VAULT = 0.07;
+	double SWITCH = 0.38;
+	double HIGH_SWITCH = 0.45;
+	double MAINTENANCE = 0.56;
+	double INITIAL = 0.4;
+	double SCALE = 0.56;
 	
 	public void robotInit() {
 		drivetrain = new DriveTrain(4, 9);
@@ -103,7 +109,7 @@ public class Robot extends IterativeRobot {
 	public void disabledPeriodic() {
 	
 	}
-	
+
 	@Override
 	public void autonomousInit() {
 		// Get AUTO DATA
@@ -121,6 +127,13 @@ public class Robot extends IterativeRobot {
 		} else {
 			return;
 		}
+		
+		dartStateNum = SWITCH;
+		new Thread(new Runnable() {
+		    public void run() {
+		        while(updateDart()){};
+		    }
+		}).start();
 		
 		// RUN AUTO
 		if(isSwitchLeft) {
@@ -237,42 +250,9 @@ public class Robot extends IterativeRobot {
 			winch1.set(0);
 			winch2.set(0);
 		}
+
+		updateDart();
 		
-		/*double rightP = rightPot.get();
-		double leftP = leftPot.get();
-		double dampConst = 1.0/0.99;
-		double error = leftP-(rightP*dampConst-0.01);
-		double move = -joyOp.getRawAxis(1);
-		
-		double moveR = move+error*8;
-		double moveL = move-error*8;
-		
-		if((rightP > 0.03 || moveR > 0) && (rightP < 0.58*dampConst || moveR < 0)) dartR.set(moveR);
-		else dartR.set(0);
-		
-		if((leftP > 0.03 || moveL > 0) && (leftP < 0.58 || moveL < 0)) dartL.set(moveL);
-		else dartL.set(0);*/
-		
-		/*double rightP = rightPot.get();
-		double leftP = leftPot.get();
-		if(dartStateNum > 0 && Math.abs(rightP-dartStateNum) > 0.02) {
-			double dampConst = 1.0/0.99;
-			double error = leftP-(rightP*dampConst-0.01);
-			double move = Math.abs(rightP-dartStateNum) > 0.1 ? 0.7*Math.signum(dartStateNum-rightP) : 0.4*Math.signum(dartStateNum-rightP);
-			
-			double moveR = move+error*8;
-			double moveL = move-error*8;
-			
-			//dartR.set(move);
-			if((rightP > 0.03 || moveR > 0) && (rightP < 0.58*dampConst || moveR < 0)) dartR.set(moveR);
-			else dartR.set(0);
-			
-			if((leftP > 0.03 || moveL > 0) && (leftP < 0.58 || moveL < 0)) dartL.set(moveL);
-			else dartL.set(0);
-		} else {
-			dartR.set(0);
-			dartL.set(0);
-		}*/
 		//SmartDashboard.putNumber("LeftEncoder: ", drivetrain.lEncoder.get());
 		//SmartDashboard.putNumber("RightEncoder: ", drivetrain.rEncoder.get());
 		
@@ -288,6 +268,31 @@ public class Robot extends IterativeRobot {
 		//drivetrain.update();
 		drivetrain.updateDashboard();
 		Timer.delay(0.05);
+	}
+	
+	boolean updateDart() {
+		double rightP = rightPot.get();
+		double leftP = leftPot.get();
+		if(dartStateNum > 0 && Math.abs(rightP-dartStateNum) > 0.02) {
+			double dampConst = 1.0/0.99;
+			double error = leftP-(rightP*dampConst-0.01);
+			double move = Math.abs(rightP-dartStateNum) > 0.1 ? 0.7*Math.signum(dartStateNum-rightP) : 0.4*Math.signum(dartStateNum-rightP);
+			
+			double moveR = move+error*8;
+			double moveL = move-error*8;
+			
+			//dartR.set(move);
+			if((rightP > 0.03 || moveR > 0) && (rightP < 0.58*dampConst || moveR < 0)) dartR.set(moveR);
+			else dartR.set(0);
+			
+			if((leftP > 0.03 || moveL > 0) && (leftP < 0.58 || moveL < 0)) dartL.set(moveL);
+			else dartL.set(0);
+			return true;
+		} else {
+			dartR.set(0);
+			dartL.set(0);
+			return false;
+		}
 	}
 	
 
