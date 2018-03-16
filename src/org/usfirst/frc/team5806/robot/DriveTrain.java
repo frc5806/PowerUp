@@ -172,55 +172,7 @@ public class DriveTrain {
 		lastUpdate = Timer.getFPGATimestamp();
 		
 	}
-	
 
-	/*AUTO*/
-	public void setupAuto(boolean switchOnLeft, AutoPosition position) {
-		System.out.println("AUTO_INIT");
-
-		if (position == AutoPosition.RIGHT || position == AutoPosition.LEFT) {
-			aState = AutoState.FORWARD;	
-		} else {
-			setupSpline();
-			aState = switchOnLeft ? AutoState.LEFT_SPLINE : AutoState.RIGHT_SPLINE;	
-		}
-	}
-
-	public boolean updateAuto() {
-		if(aState == AutoState.FORWARD) {
-			//TODO: update based on gyro
-			setSpeeds(0.7, 0.7);
-			Timer.delay(0.05);
-		} else {
-			nextSpline();
-		}
-	}
-
-	public void setupSpline() {
-		splineCounter = 0;
-		if(side == 'L' || side == 'l') {
-			normalLeft = reader.left;
-			normalRight = reader.right;
-		} else {
-			normalRight = reader.left;
-			normalLeft = reader.right;
-		}
-	}
-	
-	public void nextSpline() {
-			leftSpeed = normalLeft.get(splineCounter);
-			rightSpeed = normalRight.get(splineCounter);
-			leftAccel = normalLeft.get(splineCounter+1);
-			rightAccel = normalRight.get(splineCounter+1);
-
-			double leftVoltage = K1*leftSpeed+K3*leftAccel+MIN_VOLT;
-			double rightVoltage = K1*rightSpeed+K3*rightAccel+MIN_VOLT;
-			motors[0].set(leftVoltage); 
-			motors[1].set(rightVoltage);
-
-			splineCounter += 8;
-			Timer.delay(0.01);
-	}
 
 	/* MOVE ROUTINES */
 	// Don't try negative speed for now
@@ -260,22 +212,27 @@ public class DriveTrain {
 		setRight(0);
 	}
 	public void driveFowardGyro(double speed, double time, double direction) {
-		double startingAngle = ahrs.getAngle();
-		setLeft(speed);
-		setRight(speed);
-		do {
-			degreesTurned = Math.abs(ahrs.getAngle() - startingAngle);
-
-			double speedCorrection = 0.05*degreesTurned;
-			setLeft(direction*(speed-speedCorrection));
-			setRight(direction*(speed+speedCorrection));
-
-			Timer.delay(0.01);
-		} while(distanceTraveled < distance);
-		Timer.delay(0.02);
-		setLeft(0);
-		setRight(0);
-	}
+        setLeft(speed);
+        setRight(speed);
+        
+        double startingTime = Timer.getFPGATimestamp();
+        double startingAngle = ahrs.getAngle();
+        double deltaTime;
+        do {
+            double error = ahrs.getAngle()-startingAngle;
+            double speedCorrection = direction*error*0.04;
+            setLeft(direction*(speed+speedCorrection));
+            setRight(direction*(speed-speedCorrection));
+            
+            deltaTime =  Timer.getFPGATimestamp() - startingTime;
+            
+            System.out.println(deltaTime);
+            Timer.delay(0.01);
+        } while(deltaTime < time);
+        Timer.delay(0.02);
+        setLeft(0);
+        setRight(0);
+    }
 
 	/**
 	 * Set speed to negative to turn the opposite direction.
@@ -315,30 +272,57 @@ public class DriveTrain {
 		setLeft(0);
 		setRight(0);
 	}
-	public void turn(double maxSpeed, double minSpeed, double accelLength, double deaccelLength, double degrees, double direction) {
-
-		double startingAngle = ahrs.getAngle();
-		double speed = minSpeed;
-		double degreesTurned;
-		do { 
-			degreesTurned = Math.abs(ahrs.getAngle() - startingAngle);
-
-			setLeft(direction*speed);
-			setRight(direction*-speed);
-
-			double error = Math.abs(degrees-degreesTurned) / Math.abs(degrees);
-			if(1-error < accelLength) {
+public void turnNaive(double maxSpeed, double minSpeed, double accelLength, double deaccelLength, double degrees, double direction, double correctionTime) {
+        
+        double startingAngle = ahrs.getAngle();
+        double speed = minSpeed;
+        double degreesTurned;
+        int times = 0;
+        double oldDeg;
+        do { 
+            degreesTurned = Math.abs(ahrs.getAngle() - startingAngle);
+            
+            //speedCorrection = 0;
+            setLeft(direction*speed);
+            setRight(direction*-speed);
+            
+            double error = Math.abs(degrees-degreesTurned) / Math.abs(degrees);
+            if(1-error < accelLength) {
 				speed = minSpeed + ((maxSpeed - minSpeed) * (1-error) / accelLength);
-			} else if(error < deaccelLength) {
+            }
+            if(error < deaccelLength) {
 				speed = minSpeed + ((maxSpeed - minSpeed) * error / deaccelLength);
-			} else {
-				speed = maxSpeed;
-			}
-
-			Timer.delay(0.01);
-		} while(degreesTurned < degrees);
-		Timer.delay(0.02);
-		setLeft(0);
-		setRight(0);
-	}
+            }
+            Timer.delay(0.01);
+        } while(degreesTurned < degrees);
+        Timer.delay(0.02);
+        setLeft(0);
+        setRight(0);
+        Timer.delay(0.05);
+        
+        double startingTime = Timer.getFPGATimestamp();
+        double deltaTime;
+        double lastAboveEp =  Timer.getFPGATimestamp();
+        double epTime;
+        double t;
+        do {
+            double error = -(Math.abs(startingAngle-ahrs.getAngle())-degrees); // weird sign stuff
+            double speedEr = error*0.04;
+            setLeft(direction*(speedEr));
+            setRight(direction*-(speedEr));
+            
+            
+            t = Timer.getFPGATimestamp();
+            if(Math.abs(speedEr) < 0.05) {
+            	lastAboveEp = t;
+            }
+            deltaTime =  t - startingTime;
+            epTime = t - lastAboveEp;
+            System.out.println(deltaTime);
+            Timer.delay(0.01);
+        } while(deltaTime < correctionTime && epTime < 0.2);
+        Timer.delay(0.02);
+        setLeft(0);
+        setRight(0);
+    }
 }

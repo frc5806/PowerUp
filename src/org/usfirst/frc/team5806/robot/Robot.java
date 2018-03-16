@@ -43,7 +43,6 @@ public class Robot extends IterativeRobot {
 	Command autonomousCommand;
 	SendableChooser<Command> chooser = new SendableChooser<>();
 
-	RobotDrive robotdrive;
 	DriveTrain drivetrain;
 	Compressor c;
 	Joystick joyDrive, joyOp;
@@ -107,6 +106,7 @@ public class Robot extends IterativeRobot {
 	
 	@Override
 	public void autonomousInit() {
+		// Get AUTO DATA
 		int retries = 100;
 		String gameData = DriverStation.getInstance().getGameSpecificMessage();
 		while (gameData.length() < 2 && retries > 0) {
@@ -114,26 +114,25 @@ public class Robot extends IterativeRobot {
 			Timer.delay(0.01);
 			gameData = DriverStation.getInstance().getGameSpecificMessage();
 		}
-
 		boolean isSwitchLeft, isScaleLeft;
 		if (gameData.length() > 0) {
-			boolean isSwitchLeft = gameData.charAt(0) == 'L';
-			boolean isScaleLeft = gameData.charAt(1) == 'L';
+			isSwitchLeft = gameData.charAt(0) == 'L';
+			isScaleLeft = gameData.charAt(1) == 'L';
 		} else {
 			return;
 		}
-
-		drivetrain.setupAuto(isSwitchLeft, autoPosition);
+		
+		// RUN AUTO
+		if(isSwitchLeft) {
+			
+		} else {
+			
+		}
 	}
 	
 	@Override
 	public void autonomousPeriodic() {
-		while (updateAuto() == false) {
-			// do nothing
-		}
-
-		Timer.delay(0.05);
-		robotdrive.drive(0, 0);
+		drivetrain.setSpeeds(0, 0);
 	}
 	
 	@Override
